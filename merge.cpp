@@ -13,6 +13,7 @@
 #include <cstdint>
 #include <cstring>
 #include <iostream>
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -20,19 +21,21 @@
 namespace LIEF {
 namespace ELF {
 
-struct {
-    enum class FileIndex { zero = 0, one = 1 } file_index_;
-    const char* name_;
+// TODO: rip 可以直接看看 virtual address 是否变化
+struct SectionRelocInfo {
+    std::string name_;
 
-    uint64_t origin_virtual_address_;
+    uint32_t original_index_;
+    uint64_t original_virtual_address_;
     // Note: Section doesn't have virtual size property. If virtual address
     // isn't zero, then the whole section will be loaded to memory; otherwise,
     // it won't be loaded.
-    uint64_t origin_size_;
+    uint64_t original_size_;
 
+    uint32_t new_index_;
     uint64_t new_virtual_address_;
     uint64_t new_size_;
-} SectionRelocateInfo;
+};
 
 class RipRegisterPatcher {
  public:
@@ -202,6 +205,45 @@ class SectionExtender {
     uint64_t section_virtual_address_;
     uint64_t section_original_virtual_size_;
     uint64_t extend_size_;
+};
+
+class SectionMerger {
+ public:
+    SectionMerger(const std::string& src_file, const std::string& dst_file)
+        : src_binary_(Parser::parse(src_file)),
+          dst_binary_(Parser::parse(dst_file)) {
+        assert(src_binary_);
+        assert(dst_binary_);
+    }
+
+    void run() {
+    }
+
+ private:
+    void init_reloc_infos(
+        const Binary* binary,
+        std::map<std::string, SectionRelocInfo>* reloc_infos) {
+        for (auto it = binary->sections().begin();
+             it != binary->sections().end();
+             it++) {
+            const Section& section = *it;
+            SectionRelocInfo info;
+            info.name_ = section.name();
+            info.original_index_ = section.name_idx();
+            info.original_virtual_address_ = section.virtual_address();
+            info.original_size_ = section.original_size();
+            info.new_index_ = info.original_index_;
+            info.new_virtual_address_ = info.original_virtual_address_;
+            info.new_size_ = info.original_size_;
+            reloc_infos->emplace(info.name_, info);
+        }
+    }
+
+ private:
+    std::unique_ptr<Binary> src_binary_;
+    std::unique_ptr<Binary> dst_binary_;
+    std::map<std::string, SectionRelocInfo> src_section_reloc_infos_;
+    std::map<std::string, SectionRelocInfo> dst_section_reloc_infos_;
 };
 
 }  // namespace ELF
