@@ -20,6 +20,20 @@
 namespace LIEF {
 namespace ELF {
 
+struct {
+    enum class FileIndex { zero = 0, one = 1 } file_index_;
+    const char* name_;
+
+    uint64_t origin_virtual_address_;
+    // Note: Section doesn't have virtual size property. If virtual address
+    // isn't zero, then the whole section will be loaded to memory; otherwise,
+    // it won't be loaded.
+    uint64_t origin_size_;
+
+    uint64_t new_virtual_address_;
+    uint64_t new_size_;
+} SectionRelocateInfo;
+
 class RipRegisterPatcher {
  public:
     RipRegisterPatcher(Binary* binary,
@@ -238,6 +252,30 @@ int main() {
                 libfoo_symtab_section_content.data(),
                 libfoo_symtab_section_content.size());
     exec_symtab_section.content(exec_symtab_section_content);
+
+    // Dynamic symbols.
+    // for (auto it = libfoo->dynamic_symbols().begin();
+    //      it != libfoo->dynamic_symbols().end();
+    //      it++) {
+    //     LIEF::ELF::Symbol& symbol = *it;
+    //     std::cout << symbol.name() << std::endl;
+    // }
+
+    // Static symbols are symbols in .symtab section.
+    // readelf --section-headers libfoo.so | grep -E "Nr|.symtab" -A1
+    // readelf --symbols libfoo.so | sed -n '/.symtab/,$p'
+    // https://stackoverflow.com/questions/3065535/what-are-the-meanings-of-the-columns-of-the-symbol-table-displayed-by-readelf
+    //
+    // http://blog.k3170makan.com/2018/10/introduction-to-elf-format-part-vi.html
+    // st_shndx is set to which means it is associated to the section defined at
+    // index n in the section table. If you haven't guessed this is for the
+    // .interp section.
+    for (auto it = libfoo->static_symbols().begin();
+         it != libfoo->static_symbols().end();
+         it++) {
+        LIEF::ELF::Symbol& symbol = *it;
+        std::cout << symbol.name() << std::endl;
+    }
 
     auto dynamic_entries = exec->dynamic_entries();
     exec->remove(dynamic_entries[0]);
