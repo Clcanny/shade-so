@@ -145,6 +145,7 @@ class SectionExtender {
           section_original_virtual_size_(section_.size()),
           extend_size_(extend_size) {
         uint64_t alignment = section_.alignment();
+        assert(extend_size_ != 0);
         // Ensure section alignment after extending.
         if (extend_size_ % alignment != 0) {
             extend_size_ = (extend_size_ / alignment + 1) * alignment;
@@ -166,9 +167,9 @@ class SectionExtender {
                         extend_size_);
             section.content(content);
         }
-        for (const std::string& section_name :
-             std::vector<std::string>{".init", ".text", ".plt", ".plt.got"}) {
-            if (section_virtual_address_ != 0) {
+        if (section_virtual_address_ != 0) {
+            for (const std::string& section_name : std::vector<std::string>{
+                     ".init", ".text", ".plt", ".plt.got"}) {
                 RipRegisterPatcher(binary_,
                                    section_name,
                                    section_virtual_address_ +
@@ -215,24 +216,24 @@ int main() {
                 libfoo_text_section_content.size());
     exec_text_section.content(exec_text_section_content);
 
-    /* const LIEF::ELF::Section& libfoo_symtab_section = */
-    /*     libfoo->get_section(".symtab"); */
-    /* std::vector<uint8_t> libfoo_symtab_section_content = */
-    /*     libfoo_symtab_section.content(); */
+    const char* symtab_name = ".symtab";
+    const LIEF::ELF::Section& libfoo_symtab_section =
+        libfoo->get_section(symtab_name);
+    std::vector<uint8_t> libfoo_symtab_section_content =
+        libfoo_symtab_section.content();
     extend_size =
         LIEF::ELF::SectionExtender(
-            // exec.get(), ".symtab", libfoo_symtab_section_content.size())
-            exec.get(), ".symtab", 64)
+            exec.get(), symtab_name, libfoo_symtab_section_content.size())
             .extend();
-    /* assert(extend_size >= libfoo_symtab_section_content.size()); */
-    /* LIEF::ELF::Section& exec_symtab_section = exec->get_section(".symtab"); */
-    /* std::vector<uint8_t> exec_symtab_section_content = */
-    /*     exec_symtab_section.content(); */
-    /* std::memcpy(exec_symtab_section_content.data() + */
-    /*                 (exec_symtab_section_content.size() - extend_size), */
-    /*             libfoo_symtab_section_content.data(), */
-    /*             libfoo_symtab_section_content.size()); */
-    // exec_symtab_section.content(exec_symtab_section_content);
+    assert(extend_size >= libfoo_symtab_section_content.size());
+    LIEF::ELF::Section& exec_symtab_section = exec->get_section(symtab_name);
+    std::vector<uint8_t> exec_symtab_section_content =
+        exec_symtab_section.content();
+    std::memcpy(exec_symtab_section_content.data() +
+                    (exec_symtab_section_content.size() - extend_size),
+                libfoo_symtab_section_content.data(),
+                libfoo_symtab_section_content.size());
+    exec_symtab_section.content(exec_symtab_section_content);
 
     exec->patch_pltgot("_Z3foov",
                        exec_text_section.virtual_address() +
