@@ -216,6 +216,10 @@ int main() {
                 libfoo_text_section_content.size());
     exec_text_section.content(exec_text_section_content);
 
+    exec->patch_pltgot("_Z3foov",
+                       exec_text_section.virtual_address() +
+                           exec_text_section_content.size() - extend_size);
+
     const char* symtab_name = ".symtab";
     const LIEF::ELF::Section& libfoo_symtab_section =
         libfoo->get_section(symtab_name);
@@ -235,9 +239,6 @@ int main() {
                 libfoo_symtab_section_content.size());
     exec_symtab_section.content(exec_symtab_section_content);
 
-    exec->patch_pltgot("_Z3foov",
-                       exec_text_section.virtual_address() +
-                           exec_text_section_content.size() - extend_size);
     auto dynamic_entries = exec->dynamic_entries();
     exec->remove(dynamic_entries[0]);
     exec->write("main-hooked");
