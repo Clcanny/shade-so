@@ -215,23 +215,23 @@ int main() {
                 libfoo_text_section_content.size());
     exec_text_section.content(exec_text_section_content);
 
-    const LIEF::ELF::Section& libfoo_symtab_section =
-        libfoo->get_section(".symtab");
-    std::vector<uint8_t> libfoo_symtab_section_content =
-        libfoo_symtab_section.content();
+    /* const LIEF::ELF::Section& libfoo_symtab_section = */
+    /*     libfoo->get_section(".symtab"); */
+    /* std::vector<uint8_t> libfoo_symtab_section_content = */
+    /*     libfoo_symtab_section.content(); */
     extend_size =
         LIEF::ELF::SectionExtender(
             // exec.get(), ".symtab", libfoo_symtab_section_content.size())
             exec.get(), ".symtab", 64)
             .extend();
-    assert(extend_size >= libfoo_symtab_section_content.size());
-    LIEF::ELF::Section& exec_symtab_section = exec->get_section(".symtab");
-    std::vector<uint8_t> exec_symtab_section_content =
-        exec_symtab_section.content();
-    std::memcpy(exec_symtab_section_content.data() +
-                    (exec_symtab_section_content.size() - extend_size),
-                libfoo_symtab_section_content.data(),
-                libfoo_symtab_section_content.size());
+    /* assert(extend_size >= libfoo_symtab_section_content.size()); */
+    /* LIEF::ELF::Section& exec_symtab_section = exec->get_section(".symtab"); */
+    /* std::vector<uint8_t> exec_symtab_section_content = */
+    /*     exec_symtab_section.content(); */
+    /* std::memcpy(exec_symtab_section_content.data() + */
+    /*                 (exec_symtab_section_content.size() - extend_size), */
+    /*             libfoo_symtab_section_content.data(), */
+    /*             libfoo_symtab_section_content.size()); */
     // exec_symtab_section.content(exec_symtab_section_content);
 
     exec->patch_pltgot("_Z3foov",
