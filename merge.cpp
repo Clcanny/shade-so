@@ -21,20 +21,19 @@
 namespace LIEF {
 namespace ELF {
 
-// TODO: rip 可以直接看看 virtual address 是否变化
-struct SectionRelocInfo {
-    std::string name_;
+struct SectionMoveInfo {
+    bool is_moved_;
 
     uint32_t original_index_;
-    uint64_t original_virtual_address_;
     // Note: Section doesn't have virtual size property. If virtual address
     // isn't zero, then the whole section will be loaded to memory; otherwise,
     // it won't be loaded.
-    uint64_t original_size_;
+    uint64_t original_virtual_address_;
+    uint64_t original_offset_;
 
     uint32_t new_index_;
     uint64_t new_virtual_address_;
-    uint64_t new_size_;
+    uint64_t new_offset_;
 };
 
 class RipRegisterPatcher {
@@ -214,36 +213,79 @@ class SectionMerger {
           dst_binary_(Parser::parse(dst_file)) {
         assert(src_binary_);
         assert(dst_binary_);
+        init_src_section_move_infos();
     }
 
-    void run() {
+    void merge(const std::string& section_name) {
+        const Section& src_binary_section =
+            src_binary_->get_section(section_name);
+        const std::vector<uint8_t>& src_binary_section_content =
+            src_binary_section.content();
+        uint64_t extend_size =
+            SectionExtender(dst_binary_.get(),
+                            section_name,
+                            src_binary_section_content.size())
+                .extend();
+        assert(extend_size == src_binary_section_content.size());
+        // Fill dst_binary_section hole with src_binary_section.
+        Section& dst_binary_section = dst_binary_->get_section(section_name);
+        uint64_t dst_original_virtual_address =
+            dst_binary_section.virtual_address();
+        uint64_t dst_original_offset = dst_binary_section.offset();
+        uint64_t dst_original_size = dst_binary_section.size();
+        std::vector<uint8_t> dst_binary_section_content =
+            dst_binary_section.content();
+        dst_binary_section_content.insert(dst_binary_section_content.end(),
+                                          src_binary_section_content.begin(),
+                                          src_binary_section_content.end());
+        dst_binary_section.content(dst_binary_section_content);
+        // Set src section move info.
+        auto it_src = src_section_move_infos_.find(section_name);
+        assert(!it_src->second.is_moved_);
+        it_src->second.is_moved_ = true;
+        if (dst_original_virtual_address = 0) {
+            it_src->second.new_virtual_address_ = 0;
+        } else {
+            it_src->second.new_virtual_address_ =
+                dst_original_virtual_address + dst_original_size;
+        }
+        it_src->second.new_offset_ = dst_original_offset + dst_original_size;
+        if (it_src->second.new_virtual_address_ != 0) {
+            for (auto it = src_section_move_infos_.begin();
+                 it != src_section_move_infos_.end();
+                 it++) {
+                if (it != it_src && it->second.is_moved_ &&
+                    it->second.new_virtual_address_ >
+                        it_src->second.new_virtual_address_) {
+                    it->second.new_virtual_address_ += extend_size;
+                }
+            }
+        }
     }
 
  private:
-    void init_reloc_infos(
-        const Binary* binary,
-        std::map<std::string, SectionRelocInfo>* reloc_infos) {
-        for (auto it = binary->sections().begin();
-             it != binary->sections().end();
+    void init_src_section_move_infos() {
+        for (auto it = src_binary_->sections().begin();
+             it != src_binary_->sections().end();
              it++) {
             const Section& section = *it;
-            SectionRelocInfo info;
-            info.name_ = section.name();
+            SectionMoveInfo info;
+            info.is_moved_ = false;
             info.original_index_ = section.name_idx();
             info.original_virtual_address_ = section.virtual_address();
-            info.original_size_ = section.original_size();
+            info.original_offset_ = section.offset();
             info.new_index_ = info.original_index_;
             info.new_virtual_address_ = info.original_virtual_address_;
-            info.new_size_ = info.original_size_;
-            reloc_infos->emplace(info.name_, info);
+            info.new_offset_ = info.original_offset_;
+            assert(
+                src_section_move_infos_.emplace(section.name(), info).second);
         }
     }
 
  private:
     std::unique_ptr<Binary> src_binary_;
     std::unique_ptr<Binary> dst_binary_;
-    std::map<std::string, SectionRelocInfo> src_section_reloc_infos_;
-    std::map<std::string, SectionRelocInfo> dst_section_reloc_infos_;
+    std::map<std::string, SectionMoveInfo> src_section_move_infos_;
 };
 
 }  // namespace ELF
@@ -276,24 +318,27 @@ int main() {
                        exec_text_section.virtual_address() +
                            exec_text_section_content.size() - extend_size);
 
-    const char* symtab_name = ".symtab";
-    const LIEF::ELF::Section& libfoo_symtab_section =
-        libfoo->get_section(symtab_name);
-    std::vector<uint8_t> libfoo_symtab_section_content =
-        libfoo_symtab_section.content();
-    extend_size =
-        LIEF::ELF::SectionExtender(
-            exec.get(), symtab_name, libfoo_symtab_section_content.size())
-            .extend();
-    assert(extend_size >= libfoo_symtab_section_content.size());
-    LIEF::ELF::Section& exec_symtab_section = exec->get_section(symtab_name);
-    std::vector<uint8_t> exec_symtab_section_content =
-        exec_symtab_section.content();
-    std::memcpy(exec_symtab_section_content.data() +
-                    (exec_symtab_section_content.size() - extend_size),
-                libfoo_symtab_section_content.data(),
-                libfoo_symtab_section_content.size());
-    exec_symtab_section.content(exec_symtab_section_content);
+    // const char* symtab_name = ".symtab";
+    // const LIEF::ELF::Section& libfoo_symtab_section =
+    //     libfoo->get_section(symtab_name);
+    // std::vector<uint8_t> libfoo_symtab_section_content =
+    //     libfoo_symtab_section.content();
+    // extend_size =
+    //     LIEF::ELF::SectionExtender(
+    //         exec.get(), symtab_name, libfoo_symtab_section_content.size())
+    //         .extend();
+    // assert(extend_size >= libfoo_symtab_section_content.size());
+    // LIEF::ELF::Section& exec_symtab_section = exec->get_section(symtab_name);
+    // std::vector<uint8_t> exec_symtab_section_content =
+    //     exec_symtab_section.content();
+    // std::memcpy(exec_symtab_section_content.data() +
+    //                 (exec_symtab_section_content.size() - extend_size),
+    //             libfoo_symtab_section_content.data(),
+    //             libfoo_symtab_section_content.size());
+    // exec_symtab_section.content(exec_symtab_section_content);
+
+    LIEF::ELF::SectionMerger section_merger("main", "libfoo.so");
+    section_merger.merge(".text");
 
     // Dynamic symbols.
     // for (auto it = libfoo->dynamic_symbols().begin();
