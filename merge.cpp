@@ -222,6 +222,10 @@ class SectionMerger {
         Section& dst_binary_section = dst_binary_->get_section(section_name);
         assert(src_binary_section.alignment() ==
                dst_binary_section.alignment());
+        uint64_t dst_original_virtual_address =
+            dst_binary_section.virtual_address();
+        uint64_t dst_original_offset = dst_binary_section.offset();
+        uint64_t dst_original_size = dst_binary_section.size();
         // assert(src_binary_section.information() ==
         //        dst_binary_section.information());
         // Extend.
@@ -234,15 +238,8 @@ class SectionMerger {
                 .extend();
         assert(extend_size >= src_binary_section_content.size());
         // Fill dst_binary_section hole with src_binary_section.
-        uint64_t dst_original_virtual_address =
-            dst_binary_section.virtual_address();
-        uint64_t dst_original_offset = dst_binary_section.offset();
-        uint64_t dst_original_size = dst_binary_section.size();
         std::vector<uint8_t> dst_binary_section_content =
             dst_binary_section.content();
-        dst_binary_section_content.insert(dst_binary_section_content.end(),
-                                          src_binary_section_content.begin(),
-                                          src_binary_section_content.end());
         std::memset(dst_binary_section_content.data() +
                         (dst_binary_section_content.size() - extend_size),
                     0x90,
