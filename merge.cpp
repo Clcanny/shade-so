@@ -219,6 +219,12 @@ class SectionMerger {
     void merge(const std::string& section_name) {
         const Section& src_binary_section =
             src_binary_->get_section(section_name);
+        Section& dst_binary_section = dst_binary_->get_section(section_name);
+        assert(src_binary_section.alignment() ==
+               dst_binary_section.alignment());
+        // assert(src_binary_section.information() ==
+        //        dst_binary_section.information());
+        // Extend.
         const std::vector<uint8_t>& src_binary_section_content =
             src_binary_section.content();
         uint64_t extend_size =
@@ -226,9 +232,8 @@ class SectionMerger {
                             section_name,
                             src_binary_section_content.size())
                 .extend();
-        assert(extend_size == src_binary_section_content.size());
+        assert(extend_size >= src_binary_section_content.size());
         // Fill dst_binary_section hole with src_binary_section.
-        Section& dst_binary_section = dst_binary_->get_section(section_name);
         uint64_t dst_original_virtual_address =
             dst_binary_section.virtual_address();
         uint64_t dst_original_offset = dst_binary_section.offset();
@@ -238,6 +243,14 @@ class SectionMerger {
         dst_binary_section_content.insert(dst_binary_section_content.end(),
                                           src_binary_section_content.begin(),
                                           src_binary_section_content.end());
+        std::memset(dst_binary_section_content.data() +
+                        (dst_binary_section_content.size() - extend_size),
+                    0x90,
+                    extend_size);
+        std::memcpy(dst_binary_section_content.data() +
+                        (dst_binary_section_content.size() - extend_size),
+                    src_binary_section_content.data(),
+                    src_binary_section_content.size());
         dst_binary_section.content(dst_binary_section_content);
         // Set src section move info.
         auto it_src = src_section_move_infos_.find(section_name);
@@ -282,7 +295,7 @@ class SectionMerger {
         }
     }
 
- private:
+ public:
     std::unique_ptr<Binary> src_binary_;
     std::unique_ptr<Binary> dst_binary_;
     std::map<std::string, SectionMoveInfo> src_section_move_infos_;
@@ -292,31 +305,35 @@ class SectionMerger {
 }  // namespace LIEF
 
 int main() {
-    std::unique_ptr<LIEF::ELF::Binary> exec{LIEF::ELF::Parser::parse("main")};
-    std::unique_ptr<LIEF::ELF::Binary> libfoo{
-        LIEF::ELF::Parser::parse("libfoo.so")};
+    // std::unique_ptr<LIEF::ELF::Binary>
+    // exec{LIEF::ELF::Parser::parse("main")};
+    // std::unique_ptr<LIEF::ELF::Binary> libfoo{
+    //     LIEF::ELF::Parser::parse("libfoo.so")};
 
-    const LIEF::ELF::Section& libfoo_text_section =
-        libfoo->get_section(".text");
-    std::vector<uint8_t> libfoo_text_section_content =
-        libfoo_text_section.content();
-    uint64_t extend_size =
-        LIEF::ELF::SectionExtender(
-            exec.get(), ".text", libfoo_text_section_content.size())
-            .extend();
-    assert(extend_size >= libfoo_text_section_content.size());
-    LIEF::ELF::Section& exec_text_section = exec->get_section(".text");
-    std::vector<uint8_t> exec_text_section_content =
-        exec_text_section.content();
-    std::memcpy(exec_text_section_content.data() +
-                    (exec_text_section_content.size() - extend_size),
-                libfoo_text_section_content.data(),
-                libfoo_text_section_content.size());
-    exec_text_section.content(exec_text_section_content);
+    // const LIEF::ELF::Section& libfoo_text_section =
+    //     libfoo->get_section(".text");
+    // std::vector<uint8_t> libfoo_text_section_content =
+    //     libfoo_text_section.content();
+    // uint64_t extend_size =
+    //     LIEF::ELF::SectionExtender(
+    //         exec.get(), ".text", libfoo_text_section_content.size())
+    //         .extend();
+    // assert(extend_size >= libfoo_text_section_content.size());
+    // LIEF::ELF::Section& exec_text_section = exec->get_section(".text");
+    // std::vector<uint8_t> exec_text_section_content =
+    //     exec_text_section.content();
+    // std::memcpy(exec_text_section_content.data() +
+    //                 (exec_text_section_content.size() - extend_size),
+    //             libfoo_text_section_content.data(),
+    //             libfoo_text_section_content.size());
+    // exec_text_section.content(exec_text_section_content);
 
-    exec->patch_pltgot("_Z3foov",
-                       exec_text_section.virtual_address() +
-                           exec_text_section_content.size() - extend_size);
+    // std::cout << exec_text_section.virtual_address() +
+    //                  exec_text_section_content.size() - extend_size
+    //           << std::endl;
+    // exec->patch_pltgot("_Z3foov",
+    //                    exec_text_section.virtual_address() +
+    //                        exec_text_section_content.size() - extend_size);
 
     // const char* symtab_name = ".symtab";
     // const LIEF::ELF::Section& libfoo_symtab_section =
@@ -337,8 +354,10 @@ int main() {
     //             libfoo_symtab_section_content.size());
     // exec_symtab_section.content(exec_symtab_section_content);
 
-    LIEF::ELF::SectionMerger section_merger("main", "libfoo.so");
+    LIEF::ELF::SectionMerger section_merger("libfoo.so", "main");
     section_merger.merge(".text");
+    section_merger.merge(".symtab");
+    section_merger.dst_binary_->patch_pltgot("_Z3foov", 2066);
 
     // Dynamic symbols.
     // for (auto it = libfoo->dynamic_symbols().begin();
@@ -357,14 +376,14 @@ int main() {
     // st_shndx is set to which means it is associated to the section defined at
     // index n in the section table. If you haven't guessed this is for the
     // .interp section.
-    for (auto it = libfoo->static_symbols().begin();
-         it != libfoo->static_symbols().end();
-         it++) {
-        LIEF::ELF::Symbol& symbol = *it;
-        std::cout << symbol.name() << std::endl;
-    }
+    // for (auto it = libfoo->static_symbols().begin();
+    //      it != libfoo->static_symbols().end();
+    //      it++) {
+    //     LIEF::ELF::Symbol& symbol = *it;
+    //     // std::cout << symbol.name() << std::endl;
+    // }
 
-    auto dynamic_entries = exec->dynamic_entries();
-    exec->remove(dynamic_entries[0]);
-    exec->write("main-hooked");
+    auto dynamic_entries = section_merger.dst_binary_->dynamic_entries();
+    section_merger.dst_binary_->remove(dynamic_entries[0]);
+    section_merger.dst_binary_->write("main-hooked");
 }
