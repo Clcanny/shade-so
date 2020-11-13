@@ -214,6 +214,7 @@ class SectionMerger {
         assert(src_binary_);
         assert(dst_binary_);
         init_src_section_move_infos();
+        merge_symbol_table();
     }
 
     void merge(const std::string& section_name) {
@@ -289,6 +290,14 @@ class SectionMerger {
             info.new_offset_ = info.original_offset_;
             assert(
                 src_section_move_infos_.emplace(section.name(), info).second);
+        }
+    }
+
+    void merge_symbol_table() {
+        for (auto it_src = src_binary_->static_symbols().begin();
+             it_src != src_binary_->static_symbols().end();
+             it_src++) {
+            dst_binary_->add_static_symbol(*it_src);
         }
     }
 
@@ -380,7 +389,9 @@ int main() {
     //     // std::cout << symbol.name() << std::endl;
     // }
 
-    auto dynamic_entries = section_merger.dst_binary_->dynamic_entries();
-    section_merger.dst_binary_->remove(dynamic_entries[0]);
+    std::cout << section_merger.dst_binary_->get_section(".symtab").size()
+              << std::endl;
+    // auto dynamic_entries = section_merger.dst_binary_->dynamic_entries();
+    // section_merger.dst_binary_->remove(dynamic_entries[0]);
     section_merger.dst_binary_->write("main-hooked");
 }
