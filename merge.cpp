@@ -214,7 +214,7 @@ class SectionMerger {
         assert(src_binary_);
         assert(dst_binary_);
         init_src_section_move_infos();
-        merge_symbol_table();
+        merge_dot_symtab();
     }
 
     void merge(const std::string& section_name) {
@@ -293,7 +293,16 @@ class SectionMerger {
         }
     }
 
-    void merge_symbol_table() {
+    // Static symbols are symbols in .symtab section.
+    // readelf --section-headers libfoo.so | grep -E "Nr|.symtab" -A1
+    // readelf --symbols libfoo.so | sed -n '/.symtab/,$p'
+    // https://stackoverflow.com/questions/3065535/what-are-the-meanings-of-the-columns-of-the-symbol-table-displayed-by-readelf
+    //
+    // http://blog.k3170makan.com/2018/10/introduction-to-elf-format-part-vi.html
+    // st_shndx is set to which means it is associated to the section
+    // defined at index n in the section table. If you haven't guessed this
+    // is for the .interp section.
+    void merge_dot_symtab() {
         for (auto it_src = src_binary_->static_symbols().begin();
              it_src != src_binary_->static_symbols().end();
              it_src++) {
@@ -311,86 +320,14 @@ class SectionMerger {
 }  // namespace LIEF
 
 int main() {
-    // std::unique_ptr<LIEF::ELF::Binary>
-    // exec{LIEF::ELF::Parser::parse("main")};
-    // std::unique_ptr<LIEF::ELF::Binary> libfoo{
-    //     LIEF::ELF::Parser::parse("libfoo.so")};
-
-    // const LIEF::ELF::Section& libfoo_text_section =
-    //     libfoo->get_section(".text");
-    // std::vector<uint8_t> libfoo_text_section_content =
-    //     libfoo_text_section.content();
-    // uint64_t extend_size =
-    //     LIEF::ELF::SectionExtender(
-    //         exec.get(), ".text", libfoo_text_section_content.size())
-    //         .extend();
-    // assert(extend_size >= libfoo_text_section_content.size());
-    // LIEF::ELF::Section& exec_text_section = exec->get_section(".text");
-    // std::vector<uint8_t> exec_text_section_content =
-    //     exec_text_section.content();
-    // std::memcpy(exec_text_section_content.data() +
-    //                 (exec_text_section_content.size() - extend_size),
-    //             libfoo_text_section_content.data(),
-    //             libfoo_text_section_content.size());
-    // exec_text_section.content(exec_text_section_content);
-
-    // std::cout << exec_text_section.virtual_address() +
-    //                  exec_text_section_content.size() - extend_size
-    //           << std::endl;
     // exec->patch_pltgot("_Z3foov",
     //                    exec_text_section.virtual_address() +
     //                        exec_text_section_content.size() - extend_size);
 
-    // const char* symtab_name = ".symtab";
-    // const LIEF::ELF::Section& libfoo_symtab_section =
-    //     libfoo->get_section(symtab_name);
-    // std::vector<uint8_t> libfoo_symtab_section_content =
-    //     libfoo_symtab_section.content();
-    // extend_size =
-    //     LIEF::ELF::SectionExtender(
-    //         exec.get(), symtab_name, libfoo_symtab_section_content.size())
-    //         .extend();
-    // assert(extend_size >= libfoo_symtab_section_content.size());
-    // LIEF::ELF::Section& exec_symtab_section = exec->get_section(symtab_name);
-    // std::vector<uint8_t> exec_symtab_section_content =
-    //     exec_symtab_section.content();
-    // std::memcpy(exec_symtab_section_content.data() +
-    //                 (exec_symtab_section_content.size() - extend_size),
-    //             libfoo_symtab_section_content.data(),
-    //             libfoo_symtab_section_content.size());
-    // exec_symtab_section.content(exec_symtab_section_content);
-
     LIEF::ELF::SectionMerger section_merger("libfoo.so", "main");
     section_merger.merge(".text");
-    section_merger.merge(".symtab");
     section_merger.dst_binary_->patch_pltgot("_Z3foov", 2066);
 
-    // Dynamic symbols.
-    // for (auto it = libfoo->dynamic_symbols().begin();
-    //      it != libfoo->dynamic_symbols().end();
-    //      it++) {
-    //     LIEF::ELF::Symbol& symbol = *it;
-    //     std::cout << symbol.name() << std::endl;
-    // }
-
-    // Static symbols are symbols in .symtab section.
-    // readelf --section-headers libfoo.so | grep -E "Nr|.symtab" -A1
-    // readelf --symbols libfoo.so | sed -n '/.symtab/,$p'
-    // https://stackoverflow.com/questions/3065535/what-are-the-meanings-of-the-columns-of-the-symbol-table-displayed-by-readelf
-    //
-    // http://blog.k3170makan.com/2018/10/introduction-to-elf-format-part-vi.html
-    // st_shndx is set to which means it is associated to the section defined at
-    // index n in the section table. If you haven't guessed this is for the
-    // .interp section.
-    // for (auto it = libfoo->static_symbols().begin();
-    //      it != libfoo->static_symbols().end();
-    //      it++) {
-    //     LIEF::ELF::Symbol& symbol = *it;
-    //     // std::cout << symbol.name() << std::endl;
-    // }
-
-    std::cout << section_merger.dst_binary_->get_section(".symtab").size()
-              << std::endl;
     // auto dynamic_entries = section_merger.dst_binary_->dynamic_entries();
     // section_merger.dst_binary_->remove(dynamic_entries[0]);
     section_merger.dst_binary_->write("main-hooked");
