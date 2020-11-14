@@ -303,10 +303,24 @@ class SectionMerger {
     // defined at index n in the section table. If you haven't guessed this
     // is for the .interp section.
     void merge_dot_symtab() {
+        auto it_zero_symbol = src_binary_->static_symbols().begin();
+        if (it_zero_symbol == src_binary_->static_symbols().end()) {
+            return;
+        }
+
         for (auto it_src = src_binary_->static_symbols().begin();
              it_src != src_binary_->static_symbols().end();
              it_src++) {
-            dst_binary_->add_static_symbol(*it_src);
+            Symbol symbol = *it_src;
+            // Filter out section type symbols.
+            if (symbol.type() == ELF_SYMBOL_TYPES::STT_SECTION) {
+                assert(symbol.size() == 0);
+                assert(symbol.binding() == SYMBOL_BINDINGS::STB_LOCAL);
+                assert(symbol.visibility() ==
+                       ELF_SYMBOL_VISIBILITY::STV_DEFAULT);
+                continue;
+            }
+            dst_binary_->add_static_symbol(symbol);
         }
     }
 
@@ -327,6 +341,7 @@ int main() {
     LIEF::ELF::SectionMerger section_merger("libfoo.so", "main");
     section_merger.merge(".text");
     section_merger.dst_binary_->patch_pltgot("_Z3foov", 2066);
+    section_merger.dst_binary_->sort_static_symbols();
 
     // auto dynamic_entries = section_merger.dst_binary_->dynamic_entries();
     // section_merger.dst_binary_->remove(dynamic_entries[0]);
