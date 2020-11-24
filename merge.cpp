@@ -214,6 +214,7 @@ class SectionMerger {
         assert(src_binary_);
         assert(dst_binary_);
         init_src_section_move_infos();
+        merge(".strtab");
         merge_dot_symtab();
     }
 
@@ -320,7 +321,10 @@ class SectionMerger {
                        ELF_SYMBOL_VISIBILITY::STV_DEFAULT);
                 continue;
             }
-            dst_binary_->add_static_symbol(symbol);
+            if (symbol.demangled_name() == "(anonymous namespace)::var" ||
+                symbol.demangled_name() == "foo.cpp") {
+                dst_binary_->add_static_symbol(symbol, true);
+            }
         }
     }
 
@@ -341,7 +345,6 @@ int main() {
     LIEF::ELF::SectionMerger section_merger("libfoo.so", "main");
     section_merger.merge(".text");
     section_merger.dst_binary_->patch_pltgot("_Z3foov", 2066);
-    section_merger.dst_binary_->sort_static_symbols();
 
     // auto dynamic_entries = section_merger.dst_binary_->dynamic_entries();
     // section_merger.dst_binary_->remove(dynamic_entries[0]);
