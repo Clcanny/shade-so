@@ -298,8 +298,6 @@ class SectionMerger {
       return;
     }
 
-    const Section& strtab_section = dst_binary_->get_section(".strtab");
-    auto size = strtab_section.size();
     merge(".strtab");
 
     for (auto it_src = src_binary_->static_symbols().begin();
