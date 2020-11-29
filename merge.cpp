@@ -150,7 +150,7 @@ class Merger {
 
  private:
   void merge_dot_text() {
-    merge_section(".text");
+    merge_section(".text", 0x90);
   }
 
   // Static symbols are symbols in .symtab section.
@@ -170,18 +170,28 @@ class Merger {
            (*it_current).type() == ELF_SYMBOL_TYPES::STT_SECTION;
          it_current++) {
     };
+
+    uint64_t symbol_table_extend_size = 0;
+    uint64_t string_table_extend_size = 0;
+    uint64_t entry_size = dst_binary_->get_section(".symtab").entry_size();
+    assert(entry_size == 24);
     for (; it_current != it_end; it_current++) {
       Symbol symbol = *it_current;
       if (symbol.binding() == SYMBOL_BINDINGS::STB_LOCAL) {
-        symbol.name(symbol.name() + "@libfoo.so");
+        std::string name = symbol.name();
+        symbol_table_extend_size += entry_size;
+        string_table_extend_size += name.size() + 1;
+        // TODO(junbin.rjb)
+        // Add filename.
+        symbol.name(name);
         dst_binary_->add_static_symbol(symbol);
       }
     }
-    extend_section(".strtab", 512);
-    extend_section(".symtab", 480);
+    extend_section(".symtab", symbol_table_extend_size);
+    extend_section(".strtab", string_table_extend_size);
   }
 
-  void merge_section(const std::string& section_name) {
+  void merge_section(const std::string& section_name, uint8_t empty_value = 0) {
     const Section& src_binary_section = src_binary_->get_section(section_name);
     Section& dst_binary_section = dst_binary_->get_section(section_name);
     assert(src_binary_section.alignment() == dst_binary_section.alignment());
@@ -204,7 +214,7 @@ class Merger {
         dst_binary_section.content();
     std::memset(dst_binary_section_content.data() +
                     (dst_binary_section_content.size() - extend_size),
-                0x90,
+                empty_value,
                 extend_size);
     std::memcpy(dst_binary_section_content.data() +
                     (dst_binary_section_content.size() - extend_size),
