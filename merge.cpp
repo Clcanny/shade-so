@@ -21,23 +21,8 @@
 namespace LIEF {
 namespace ELF {
 
-struct SectionMoveInfo {
-  bool is_moved_;
-
-  uint32_t original_index_;
-  // Note: Section doesn't have virtual size property. If virtual address
-  // isn't zero, then the whole section will be loaded to memory; otherwise,
-  // it won't be loaded.
-  uint64_t original_virtual_address_;
-  uint64_t original_offset_;
-
-  uint32_t new_index_;
-  uint64_t new_virtual_address_;
-  uint64_t new_offset_;
-};
-
 class RipRegisterPatcher {
-  public:
+ public:
   RipRegisterPatcher(Binary* binary,
                      const std::string& section_name,
                      uint64_t barrier,
@@ -70,7 +55,7 @@ class RipRegisterPatcher {
     assert(current_instruction_offset_ == content_size_);
   }
 
-  private:
+ private:
   bool operand_contains_rip_register(const ZydisDecodedOperand& operand) {
     if (operand.type == ZYDIS_OPERAND_TYPE_REGISTER &&
         operand.reg.value == ZYDIS_REGISTER_RIP) {
@@ -134,7 +119,7 @@ class RipRegisterPatcher {
     }
   }
 
-  private:
+ private:
   Binary* binary_;
   const Section& section_;
   uint64_t section_virtual_address_;
@@ -148,7 +133,7 @@ class RipRegisterPatcher {
 };
 
 class SectionExtender {
-  public:
+ public:
   SectionExtender(Binary* binary, const std::string& name, uint64_t extend_size)
       : binary_(binary), section_name_(name),
         section_(binary_->get_section(section_name_)),
@@ -191,7 +176,7 @@ class SectionExtender {
     return extend_size_;
   }
 
-  private:
+ private:
   Binary* binary_;
   const std::string& section_name_;
   const Section& section_;
@@ -201,13 +186,12 @@ class SectionExtender {
 };
 
 class SectionMerger {
-  public:
+ public:
   SectionMerger(const std::string& src_file, const std::string& dst_file)
       : src_binary_(Parser::parse(src_file)),
         dst_binary_(Parser::parse(dst_file)) {
     assert(src_binary_);
     assert(dst_binary_);
-    // init_src_section_move_infos();
     merge_dot_symtab();
   }
 
@@ -241,48 +225,9 @@ class SectionMerger {
                 src_binary_section_content.data(),
                 src_binary_section_content.size());
     dst_binary_section.content(dst_binary_section_content);
-    // Set src section move info.
-    // auto it_src = src_section_move_infos_.find(section_name);
-    // assert(!it_src->second.is_moved_);
-    // it_src->second.is_moved_ = true;
-    // if (dst_original_virtual_address = 0) {
-    //   it_src->second.new_virtual_address_ = 0;
-    // } else {
-    //   it_src->second.new_virtual_address_ =
-    //       dst_original_virtual_address + dst_original_size;
-    // }
-    // it_src->second.new_offset_ = dst_original_offset + dst_original_size;
-    // if (it_src->second.new_virtual_address_ != 0) {
-    //   for (auto it = src_section_move_infos_.begin();
-    //        it != src_section_move_infos_.end();
-    //        it++) {
-    //     if (it != it_src && it->second.is_moved_ &&
-    //         it->second.new_virtual_address_ >
-    //             it_src->second.new_virtual_address_) {
-    //       it->second.new_virtual_address_ += extend_size;
-    //     }
-    //   }
-    // }
   }
 
-  private:
-  void init_src_section_move_infos() {
-    for (auto it = src_binary_->sections().begin();
-         it != src_binary_->sections().end();
-         it++) {
-      const Section& section = *it;
-      SectionMoveInfo info;
-      info.is_moved_ = false;
-      info.original_index_ = section.name_idx();
-      info.original_virtual_address_ = section.virtual_address();
-      info.original_offset_ = section.offset();
-      info.new_index_ = info.original_index_;
-      info.new_virtual_address_ = info.original_virtual_address_;
-      info.new_offset_ = info.original_offset_;
-      assert(src_section_move_infos_.emplace(section.name(), info).second);
-    }
-  }
-
+ private:
   // Static symbols are symbols in .symtab section.
   // readelf --section-headers libfoo.so | grep -E "Nr|.symtab" -A1
   // readelf --symbols libfoo.so | sed -n '/.symtab/,$p'
@@ -318,10 +263,9 @@ class SectionMerger {
     }
   }
 
-  public:
+ public:
   std::unique_ptr<Binary> src_binary_;
   std::unique_ptr<Binary> dst_binary_;
-  std::map<std::string, SectionMoveInfo> src_section_move_infos_;
 };
 
 }  // namespace ELF
