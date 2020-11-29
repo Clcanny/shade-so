@@ -139,40 +139,20 @@ class Merger {
         dst_binary_(Parser::parse(dst_file)) {
     assert(src_binary_);
     assert(dst_binary_);
-    merge_dot_symtab();
   }
 
-  void merge(const std::string& section_name) {
-    const Section& src_binary_section = src_binary_->get_section(section_name);
-    Section& dst_binary_section = dst_binary_->get_section(section_name);
-    assert(src_binary_section.alignment() == dst_binary_section.alignment());
-    uint64_t dst_original_virtual_address =
-        dst_binary_section.virtual_address();
-    uint64_t dst_original_offset = dst_binary_section.offset();
-    uint64_t dst_original_size = dst_binary_section.size();
-    // assert(src_binary_section.information() ==
-    //        dst_binary_section.information());
-    // Extend.
-    const std::vector<uint8_t>& src_binary_section_content =
-        src_binary_section.content();
-    uint64_t extend_size =
-        extend_section(section_name, src_binary_section_content.size());
-    assert(extend_size >= src_binary_section_content.size());
-    // Fill dst_binary_section hole with src_binary_section.
-    std::vector<uint8_t> dst_binary_section_content =
-        dst_binary_section.content();
-    std::memset(dst_binary_section_content.data() +
-                    (dst_binary_section_content.size() - extend_size),
-                0x90,
-                extend_size);
-    std::memcpy(dst_binary_section_content.data() +
-                    (dst_binary_section_content.size() - extend_size),
-                src_binary_section_content.data(),
-                src_binary_section_content.size());
-    dst_binary_section.content(dst_binary_section_content);
+  void operator()(const std::string& filename) {
+    merge_dot_text();
+    merge_dot_symtab();
+    dst_binary_->patch_pltgot("_Z3foov", 2066);
+    dst_binary_->write(filename);
   }
 
  private:
+  void merge_dot_text() {
+    merge_section(".text");
+  }
+
   // Static symbols are symbols in .symtab section.
   // readelf --section-headers libfoo.so | grep -E "Nr|.symtab" -A1
   // readelf --symbols libfoo.so | sed -n '/.symtab/,$p'
@@ -199,6 +179,38 @@ class Merger {
     }
     extend_section(".strtab", 512);
     extend_section(".symtab", 480);
+  }
+
+  void merge_section(const std::string& section_name) {
+    const Section& src_binary_section = src_binary_->get_section(section_name);
+    Section& dst_binary_section = dst_binary_->get_section(section_name);
+    assert(src_binary_section.alignment() == dst_binary_section.alignment());
+    uint64_t dst_original_virtual_address =
+        dst_binary_section.virtual_address();
+    uint64_t dst_original_offset = dst_binary_section.offset();
+    uint64_t dst_original_size = dst_binary_section.size();
+    // assert(src_binary_section.information() ==
+    //        dst_binary_section.information());
+
+    // Extend.
+    const std::vector<uint8_t>& src_binary_section_content =
+        src_binary_section.content();
+    uint64_t extend_size =
+        extend_section(section_name, src_binary_section_content.size());
+    assert(extend_size >= src_binary_section_content.size());
+
+    // Fill dst_binary_section hole with src_binary_section.
+    std::vector<uint8_t> dst_binary_section_content =
+        dst_binary_section.content();
+    std::memset(dst_binary_section_content.data() +
+                    (dst_binary_section_content.size() - extend_size),
+                0x90,
+                extend_size);
+    std::memcpy(dst_binary_section_content.data() +
+                    (dst_binary_section_content.size() - extend_size),
+                src_binary_section_content.data(),
+                src_binary_section_content.size());
+    dst_binary_section.content(dst_binary_section_content);
   }
 
   uint64_t extend_section(const std::string& section_name,
@@ -231,7 +243,7 @@ class Merger {
     return extend_size;
   }
 
- public:
+ private:
   std::unique_ptr<Binary> src_binary_;
   std::unique_ptr<Binary> dst_binary_;
 };
@@ -240,15 +252,6 @@ class Merger {
 }  // namespace LIEF
 
 int main() {
-  // exec->patch_pltgot("_Z3foov",
-  //                    exec_text_section.virtual_address() +
-  //                        exec_text_section_content.size() - extend_size);
-
-  LIEF::ELF::Merger section_merger("libfoo.so", "main");
-  section_merger.merge(".text");
-  section_merger.dst_binary_->patch_pltgot("_Z3foov", 2066);
-
-  // auto dynamic_entries = section_merger.dst_binary_->dynamic_entries();
-  // section_merger.dst_binary_->remove(dynamic_entries[0]);
-  section_merger.dst_binary_->write("main-hooked");
+  LIEF::ELF::Merger merger("libfoo.so", "main");
+  merger("main-hooked");
 }
