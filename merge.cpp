@@ -142,6 +142,7 @@ class Merger {
   }
 
   void operator()(const std::string& filename) {
+    merge_section(".data");
     merge_dot_text();
     merge_dot_symtab();
     dst_binary_->patch_pltgot("_Z3foov", 2066);
