@@ -150,7 +150,8 @@ class Merger {
 
  private:
   void merge_dot_text() {
-    merge_section(".text", 0x90);
+    uint8_t nop_code = 0x90;
+    merge_section(".text", nop_code);
   }
 
   // Static symbols are symbols in .symtab section.
