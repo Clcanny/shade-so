@@ -207,7 +207,7 @@ class SectionMerger {
         dst_binary_(Parser::parse(dst_file)) {
     assert(src_binary_);
     assert(dst_binary_);
-    init_src_section_move_infos();
+    // init_src_section_move_infos();
     merge_dot_symtab();
   }
 
@@ -242,27 +242,27 @@ class SectionMerger {
                 src_binary_section_content.size());
     dst_binary_section.content(dst_binary_section_content);
     // Set src section move info.
-    auto it_src = src_section_move_infos_.find(section_name);
-    assert(!it_src->second.is_moved_);
-    it_src->second.is_moved_ = true;
-    if (dst_original_virtual_address = 0) {
-      it_src->second.new_virtual_address_ = 0;
-    } else {
-      it_src->second.new_virtual_address_ =
-          dst_original_virtual_address + dst_original_size;
-    }
-    it_src->second.new_offset_ = dst_original_offset + dst_original_size;
-    if (it_src->second.new_virtual_address_ != 0) {
-      for (auto it = src_section_move_infos_.begin();
-           it != src_section_move_infos_.end();
-           it++) {
-        if (it != it_src && it->second.is_moved_ &&
-            it->second.new_virtual_address_ >
-                it_src->second.new_virtual_address_) {
-          it->second.new_virtual_address_ += extend_size;
-        }
-      }
-    }
+    // auto it_src = src_section_move_infos_.find(section_name);
+    // assert(!it_src->second.is_moved_);
+    // it_src->second.is_moved_ = true;
+    // if (dst_original_virtual_address = 0) {
+    //   it_src->second.new_virtual_address_ = 0;
+    // } else {
+    //   it_src->second.new_virtual_address_ =
+    //       dst_original_virtual_address + dst_original_size;
+    // }
+    // it_src->second.new_offset_ = dst_original_offset + dst_original_size;
+    // if (it_src->second.new_virtual_address_ != 0) {
+    //   for (auto it = src_section_move_infos_.begin();
+    //        it != src_section_move_infos_.end();
+    //        it++) {
+    //     if (it != it_src && it->second.is_moved_ &&
+    //         it->second.new_virtual_address_ >
+    //             it_src->second.new_virtual_address_) {
+    //       it->second.new_virtual_address_ += extend_size;
+    //     }
+    //   }
+    // }
   }
 
   private:
@@ -299,21 +299,20 @@ class SectionMerger {
     }
 
     merge(".strtab");
+    merge(".strtab");
 
-    for (auto it_src = src_binary_->static_symbols().begin();
-         it_src != src_binary_->static_symbols().end();
-         it_src++) {
-      Symbol symbol = *it_src;
-      // Filter out section type symbols.
-      if (symbol.type() == ELF_SYMBOL_TYPES::STT_SECTION) {
-        assert(symbol.size() == 0);
-        assert(symbol.binding() == SYMBOL_BINDINGS::STB_LOCAL);
-        assert(symbol.visibility() == ELF_SYMBOL_VISIBILITY::STV_DEFAULT);
-        continue;
-      }
-      if (symbol.demangled_name() == "(anonymous namespace)::var" ||
-          symbol.demangled_name() == "foo.cpp") {
-        // symbol.information(symbol.information() + size);
+    SectionExtender(dst_binary_.get(), ".symtab", 480).extend();
+    auto it_current = src_binary_->static_symbols().begin();
+    auto it_end = src_binary_->static_symbols().end();
+    it_current++;
+    for (; it_current != it_end &&
+           (*it_current).type() == ELF_SYMBOL_TYPES::STT_SECTION;
+         it_current++) {
+    };
+    for (; it_current != it_end; it_current++) {
+      Symbol symbol = *it_current;
+      if (symbol.binding() == SYMBOL_BINDINGS::STB_LOCAL) {
+        symbol.name(symbol.name() + "@libfoo.so");
         dst_binary_->add_static_symbol(symbol);
       }
     }
