@@ -132,62 +132,9 @@ class RipRegisterPatcher {
   ZydisDecoder decoder_;
 };
 
-class SectionExtender {
+class Merger {
  public:
-  SectionExtender(Binary* binary, const std::string& name, uint64_t extend_size)
-      : binary_(binary), section_name_(name),
-        section_(binary_->get_section(section_name_)),
-        section_virtual_address_(section_.virtual_address()),
-        section_original_virtual_size_(section_.size()),
-        extend_size_(extend_size) {
-    uint64_t alignment = section_.alignment();
-    assert(extend_size_ != 0);
-    // Ensure section alignment after extending.
-    if (extend_size_ % alignment != 0) {
-      extend_size_ = (extend_size_ / alignment + 1) * alignment;
-    }
-    assert(section_virtual_address_ % alignment == 0);
-    // assert(section_original_virtual_size_ == section_.physical_size());
-    // assert(section_original_virtual_size_ % alignment == 0);
-  }
-
-  uint64_t extend() {
-    // Call method of LIEF.
-    binary_->extend(section_, extend_size_);
-    if (section_name_ == ".text") {
-      // Fill with nop.
-      LIEF::ELF::Section& section = binary_->get_section(section_name_);
-      std::vector<uint8_t> content = section.content();
-      std::memset(
-          content.data() + (content.size() - extend_size_), 0x90, extend_size_);
-      section.content(content);
-    }
-    if (section_virtual_address_ != 0) {
-      for (const std::string& section_name :
-           std::vector<std::string>{".init", ".text", ".plt", ".plt.got"}) {
-        RipRegisterPatcher(binary_,
-                           section_name,
-                           section_virtual_address_ +
-                               section_original_virtual_size_,
-                           extend_size_)
-            .patch();
-      }
-    }
-    return extend_size_;
-  }
-
- private:
-  Binary* binary_;
-  const std::string& section_name_;
-  const Section& section_;
-  uint64_t section_virtual_address_;
-  uint64_t section_original_virtual_size_;
-  uint64_t extend_size_;
-};
-
-class SectionMerger {
- public:
-  SectionMerger(const std::string& src_file, const std::string& dst_file)
+  Merger(const std::string& src_file, const std::string& dst_file)
       : src_binary_(Parser::parse(src_file)),
         dst_binary_(Parser::parse(dst_file)) {
     assert(src_binary_);
@@ -208,10 +155,8 @@ class SectionMerger {
     // Extend.
     const std::vector<uint8_t>& src_binary_section_content =
         src_binary_section.content();
-    uint64_t extend_size = SectionExtender(dst_binary_.get(),
-                                           section_name,
-                                           src_binary_section_content.size())
-                               .extend();
+    uint64_t extend_size =
+        extend_section(section_name, src_binary_section_content.size());
     assert(extend_size >= src_binary_section_content.size());
     // Fill dst_binary_section hole with src_binary_section.
     std::vector<uint8_t> dst_binary_section_content =
@@ -238,15 +183,6 @@ class SectionMerger {
   // defined at index n in the section table. If you haven't guessed this
   // is for the .interp section.
   void merge_dot_symtab() {
-    auto it_zero_symbol = src_binary_->static_symbols().begin();
-    if (it_zero_symbol == src_binary_->static_symbols().end()) {
-      return;
-    }
-
-    merge(".strtab");
-    merge(".strtab");
-
-    SectionExtender(dst_binary_.get(), ".symtab", 480).extend();
     auto it_current = src_binary_->static_symbols().begin();
     auto it_end = src_binary_->static_symbols().end();
     it_current++;
@@ -261,6 +197,38 @@ class SectionMerger {
         dst_binary_->add_static_symbol(symbol);
       }
     }
+    extend_section(".strtab", 512);
+    extend_section(".symtab", 480);
+  }
+
+  uint64_t extend_section(const std::string& section_name,
+                          uint64_t extend_size) {
+    const LIEF::ELF::Section& section = dst_binary_->get_section(section_name);
+    uint64_t alignment = section.alignment();
+    // Ensure section alignment after extending.
+    if (extend_size % alignment != 0) {
+      extend_size = (extend_size / alignment + 1) * alignment;
+    }
+    uint64_t section_virtual_address = section.virtual_address();
+    uint64_t section_original_virtual_size = section.size();
+    assert(section_virtual_address % alignment == 0);
+    // assert(section_original_virtual_size_ == section_.physical_size());
+    // assert(section_original_virtual_size_ % alignment == 0);
+
+    dst_binary_->extend(section, extend_size);
+
+    if (section_virtual_address != 0) {
+      for (const std::string& section_name :
+           std::vector<std::string>{".init", ".text", ".plt", ".plt.got"}) {
+        RipRegisterPatcher(dst_binary_.get(),
+                           section_name,
+                           section_virtual_address +
+                               section_original_virtual_size,
+                           extend_size)
+            .patch();
+      }
+    }
+    return extend_size;
   }
 
  public:
@@ -276,7 +244,7 @@ int main() {
   //                    exec_text_section.virtual_address() +
   //                        exec_text_section_content.size() - extend_size);
 
-  LIEF::ELF::SectionMerger section_merger("libfoo.so", "main");
+  LIEF::ELF::Merger section_merger("libfoo.so", "main");
   section_merger.merge(".text");
   section_merger.dst_binary_->patch_pltgot("_Z3foov", 2066);
 
