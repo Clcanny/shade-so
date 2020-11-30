@@ -148,7 +148,8 @@ class Merger {
     merge_section(".data");
     merge_dot_text();
     merge_dot_symtab();
-    output_binary_->patch_pltgot("_Z3foov", 2066);
+    // output_binary_->patch_pltgot("_Z3foov", 2066);
+    patch_pltgot();
     output_binary_->write(filename);
   }
 
@@ -225,6 +226,28 @@ class Merger {
     }
     extend_section(".symtab", symbol_table_extend_size);
     extend_section(".strtab", string_table_extend_size);
+  }
+
+  void patch_pltgot() {
+    std::for_each(
+        output_binary_->static_symbols().begin(),
+        output_binary_->static_symbols().end(),
+        [this](const LIEF::ELF::Symbol& imported_symbol) {
+          if (imported_symbol.shndx() ==
+                  static_cast<uint16_t>(SYMBOL_SECTION_INDEX::SHN_UNDEF) &&
+              output_binary_->has_static_symbol(imported_symbol.name())) {
+            const Symbol& exported_symbol =
+                output_binary_->get_static_symbol(imported_symbol.name());
+            if (exported_symbol.shndx() !=
+                    static_cast<uint16_t>(SYMBOL_SECTION_INDEX::SHN_UNDEF) &&
+                exported_symbol.binding() == SYMBOL_BINDINGS::STB_LOCAL) {
+              output_binary_->patch_pltgot(
+                  exported_symbol.name(),
+                  output_binary_->get_static_symbol(exported_symbol.name())
+                      .value());
+            }
+          }
+        });
   }
 
   uint16_t get_section_id(Binary* binary, const std::string& section_name) {
