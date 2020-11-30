@@ -175,6 +175,17 @@ class Merger {
          it_current++) {
     };
 
+    uint32_t text_section_index = 0;
+    for (auto it = dst_binary_->sections().begin();
+         it != dst_binary_->sections().end();
+         it++) {
+      if (it->name() == ".text") {
+        assert(text_section_index == 0);
+        text_section_index = it - dst_binary_->sections().begin();
+      }
+    }
+    assert(text_section_index != 0);
+
     uint64_t symbol_table_extend_size = 0;
     uint64_t string_table_extend_size = 0;
     uint64_t entry_size = output_binary_->get_section(".symtab").entry_size();
@@ -183,7 +194,7 @@ class Merger {
       Symbol symbol = *it_current;
       switch (symbol.type()) {
       case ELF_SYMBOL_TYPES::STT_FUNC:
-        symbol.shndx(14);
+        symbol.shndx(text_section_index);
         symbol.value(symbol.value() -
                      src_binary_->get_section(".text").virtual_address() +
                      output_binary_->get_section(".text").virtual_address() +
