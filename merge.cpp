@@ -182,7 +182,8 @@ class Merger {
     assert(entry_size == 24);
     for (; it_current != it_end; it_current++) {
       Symbol symbol = *it_current;
-      if (symbol.binding() == SYMBOL_BINDINGS::STB_LOCAL) {
+      if (symbol.shndx() !=
+          static_cast<uint16_t>(SYMBOL_SECTION_INDEX::SHN_UNDEF)) {
         switch (symbol.type()) {
         case ELF_SYMBOL_TYPES::STT_FUNC:
         case ELF_SYMBOL_TYPES::STT_OBJECT:
@@ -226,6 +227,7 @@ class Merger {
               (dst_binary_->sections().begin() + dst_section_id)->size());
           break;
         }
+        symbol.binding(SYMBOL_BINDINGS::STB_LOCAL);
         std::string name = symbol.name();
         symbol_table_extend_size += entry_size;
         string_table_extend_size += name.size() + 1;
