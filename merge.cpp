@@ -8,6 +8,7 @@
 #include <LIEF/ELF.hpp>
 #include <Zydis/Zydis.h>
 
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -195,26 +196,11 @@ class Merger {
           if (it_index != cached_section_indices.end()) {
             dst_section_id = it_index->second;
           } else {
-            for (auto it = dst_binary_->sections().begin();
-                 it != dst_binary_->sections().end();
-                 it++) {
-              if (it->name() == section_name) {
-                assert(dst_section_id == 0);
-                dst_section_id = it - dst_binary_->sections().begin();
-                cached_section_indices.emplace(section_name, dst_section_id);
-              }
-            }
-
-            uint32_t output_section_id = 0;
-            for (auto it = output_binary_->sections().begin();
-                 it != output_binary_->sections().end();
-                 it++) {
-              if (it->name() == section_name) {
-                assert(output_section_id == 0);
-                output_section_id = it - output_binary_->sections().begin();
-              }
-            }
+            dst_section_id = get_section_id(dst_binary_.get(), section_name);
+            uint16_t output_section_id =
+                get_section_id(output_binary_.get(), section_name);
             assert(output_section_id == dst_section_id);
+            cached_section_indices.emplace(section_name, dst_section_id);
           }
           assert(dst_section_id != 0);
           symbol.shndx(dst_section_id);
@@ -239,6 +225,18 @@ class Merger {
     }
     extend_section(".symtab", symbol_table_extend_size);
     extend_section(".strtab", string_table_extend_size);
+  }
+
+  uint16_t get_section_id(Binary* binary, const std::string& section_name) {
+    uint16_t section_id = 0;
+    for (auto it = binary->sections().begin(); it != binary->sections().end();
+         it++) {
+      if (it->name() == section_name) {
+        assert(section_id == 0);
+        section_id = it - binary->sections().begin();
+      }
+    }
+    return section_id;
   }
 
   void merge_section(const std::string& section_name, uint8_t empty_value = 0) {
