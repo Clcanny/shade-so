@@ -3,6 +3,9 @@
 // foo.cpp -o libfoo.so
 namespace {
 int var = 1;
+
+void bar() {
 }
+}  // namespace
 void foo() {
 }

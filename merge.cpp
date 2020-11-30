@@ -136,17 +136,19 @@ class Merger {
  public:
   Merger(const std::string& src_file, const std::string& dst_file)
       : src_binary_(Parser::parse(src_file)),
-        dst_binary_(Parser::parse(dst_file)) {
+        dst_binary_(Parser::parse(dst_file)),
+        output_binary_(Parser::parse(dst_file)) {
     assert(src_binary_);
     assert(dst_binary_);
+    assert(output_binary_);
   }
 
   void operator()(const std::string& filename) {
     merge_section(".data");
     merge_dot_text();
     merge_dot_symtab();
-    dst_binary_->patch_pltgot("_Z3foov", 2066);
-    dst_binary_->write(filename);
+    output_binary_->patch_pltgot("_Z3foov", 2066);
+    output_binary_->write(filename);
   }
 
  private:
@@ -175,10 +177,18 @@ class Merger {
 
     uint64_t symbol_table_extend_size = 0;
     uint64_t string_table_extend_size = 0;
-    uint64_t entry_size = dst_binary_->get_section(".symtab").entry_size();
+    uint64_t entry_size = output_binary_->get_section(".symtab").entry_size();
     assert(entry_size == 24);
     for (; it_current != it_end; it_current++) {
       Symbol symbol = *it_current;
+      switch (symbol.type()) {
+      case ELF_SYMBOL_TYPES::STT_FUNC:
+        symbol.value(symbol.value() -
+                     src_binary_->get_section(".text").virtual_address() +
+                     output_binary_->get_section(".text").virtual_address() +
+                     dst_binary_->get_section(".text").size());
+        break;
+      }
       if (symbol.binding() == SYMBOL_BINDINGS::STB_LOCAL) {
         std::string name = symbol.name();
         symbol_table_extend_size += entry_size;
@@ -186,7 +196,7 @@ class Merger {
         // TODO(junbin.rjb)
         // Add filename.
         symbol.name(name);
-        dst_binary_->add_static_symbol(symbol);
+        output_binary_->add_static_symbol(symbol);
       }
     }
     extend_section(".symtab", symbol_table_extend_size);
@@ -195,14 +205,14 @@ class Merger {
 
   void merge_section(const std::string& section_name, uint8_t empty_value = 0) {
     const Section& src_binary_section = src_binary_->get_section(section_name);
-    Section& dst_binary_section = dst_binary_->get_section(section_name);
-    assert(src_binary_section.alignment() == dst_binary_section.alignment());
+    Section& output_binary_section = output_binary_->get_section(section_name);
+    assert(src_binary_section.alignment() == output_binary_section.alignment());
     uint64_t dst_original_virtual_address =
-        dst_binary_section.virtual_address();
-    uint64_t dst_original_offset = dst_binary_section.offset();
-    uint64_t dst_original_size = dst_binary_section.size();
+        output_binary_section.virtual_address();
+    uint64_t dst_original_offset = output_binary_section.offset();
+    uint64_t dst_original_size = output_binary_section.size();
     // assert(src_binary_section.information() ==
-    //        dst_binary_section.information());
+    //        output_binary_section.information());
 
     // Extend.
     const std::vector<uint8_t>& src_binary_section_content =
@@ -211,23 +221,24 @@ class Merger {
         extend_section(section_name, src_binary_section_content.size());
     assert(extend_size >= src_binary_section_content.size());
 
-    // Fill dst_binary_section hole with src_binary_section.
-    std::vector<uint8_t> dst_binary_section_content =
-        dst_binary_section.content();
-    std::memset(dst_binary_section_content.data() +
-                    (dst_binary_section_content.size() - extend_size),
+    // Fill output_binary_section hole with src_binary_section.
+    std::vector<uint8_t> output_binary_section_content =
+        output_binary_section.content();
+    std::memset(output_binary_section_content.data() +
+                    (output_binary_section_content.size() - extend_size),
                 empty_value,
                 extend_size);
-    std::memcpy(dst_binary_section_content.data() +
-                    (dst_binary_section_content.size() - extend_size),
+    std::memcpy(output_binary_section_content.data() +
+                    (output_binary_section_content.size() - extend_size),
                 src_binary_section_content.data(),
                 src_binary_section_content.size());
-    dst_binary_section.content(dst_binary_section_content);
+    output_binary_section.content(output_binary_section_content);
   }
 
   uint64_t extend_section(const std::string& section_name,
                           uint64_t extend_size) {
-    const LIEF::ELF::Section& section = dst_binary_->get_section(section_name);
+    const LIEF::ELF::Section& section =
+        output_binary_->get_section(section_name);
     uint64_t alignment = section.alignment();
     // Ensure section alignment after extending.
     if (extend_size % alignment != 0) {
@@ -239,12 +250,12 @@ class Merger {
     // assert(section_original_virtual_size_ == section_.physical_size());
     // assert(section_original_virtual_size_ % alignment == 0);
 
-    dst_binary_->extend(section, extend_size);
+    output_binary_->extend(section, extend_size);
 
     if (section_virtual_address != 0) {
       for (const std::string& section_name :
            std::vector<std::string>{".init", ".text", ".plt", ".plt.got"}) {
-        RipRegisterPatcher(dst_binary_.get(),
+        RipRegisterPatcher(output_binary_.get(),
                            section_name,
                            section_virtual_address +
                                section_original_virtual_size,
@@ -258,6 +269,7 @@ class Merger {
  private:
   std::unique_ptr<Binary> src_binary_;
   std::unique_ptr<Binary> dst_binary_;
+  std::unique_ptr<Binary> output_binary_;
 };
 
 }  // namespace ELF
