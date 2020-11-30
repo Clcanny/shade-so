@@ -183,6 +183,7 @@ class Merger {
       Symbol symbol = *it_current;
       switch (symbol.type()) {
       case ELF_SYMBOL_TYPES::STT_FUNC:
+        symbol.shndx(14);
         symbol.value(symbol.value() -
                      src_binary_->get_section(".text").virtual_address() +
                      output_binary_->get_section(".text").virtual_address() +
