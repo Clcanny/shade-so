@@ -175,33 +175,57 @@ class Merger {
          it_current++) {
     };
 
-    uint32_t text_section_index = 0;
-    for (auto it = dst_binary_->sections().begin();
-         it != dst_binary_->sections().end();
-         it++) {
-      if (it->name() == ".text") {
-        assert(text_section_index == 0);
-        text_section_index = it - dst_binary_->sections().begin();
-      }
-    }
-    assert(text_section_index != 0);
-
+    std::map<std::string, uint32_t> cached_section_indices;
     uint64_t symbol_table_extend_size = 0;
     uint64_t string_table_extend_size = 0;
     uint64_t entry_size = output_binary_->get_section(".symtab").entry_size();
     assert(entry_size == 24);
     for (; it_current != it_end; it_current++) {
       Symbol symbol = *it_current;
-      switch (symbol.type()) {
-      case ELF_SYMBOL_TYPES::STT_FUNC:
-        symbol.shndx(text_section_index);
-        symbol.value(symbol.value() -
-                     src_binary_->get_section(".text").virtual_address() +
-                     output_binary_->get_section(".text").virtual_address() +
-                     dst_binary_->get_section(".text").size());
-        break;
-      }
       if (symbol.binding() == SYMBOL_BINDINGS::STB_LOCAL) {
+        switch (symbol.type()) {
+        case ELF_SYMBOL_TYPES::STT_FUNC:
+        case ELF_SYMBOL_TYPES::STT_OBJECT:
+          uint32_t src_section_id = symbol.shndx();
+          const std::string& section_name =
+              (src_binary_->sections() + src_section_id)->name();
+          uint32_t dst_section_id = 0;
+          auto it_index = cached_section_indices.find(section_name);
+          if (it_index != cached_section_indices.end()) {
+            dst_section_id = it_index->second;
+          } else {
+            for (auto it = dst_binary_->sections().begin();
+                 it != dst_binary_->sections().end();
+                 it++) {
+              if (it->name() == section_name) {
+                assert(dst_section_id == 0);
+                dst_section_id = it - dst_binary_->sections().begin();
+                cached_section_indices.emplace(section_name, dst_section_id);
+              }
+            }
+
+            uint32_t output_section_id = 0;
+            for (auto it = output_binary_->sections().begin();
+                 it != output_binary_->sections().end();
+                 it++) {
+              if (it->name() == section_name) {
+                assert(output_section_id == 0);
+                output_section_id = it - output_binary_->sections().begin();
+              }
+            }
+            assert(output_section_id == dst_section_id);
+          }
+          assert(dst_section_id != 0);
+          symbol.shndx(dst_section_id);
+          symbol.value(
+              symbol.value() -
+              (src_binary_->sections().begin() + src_section_id)
+                  ->virtual_address() +
+              (output_binary_->sections().begin() + dst_section_id)
+                  ->virtual_address() +
+              (dst_binary_->sections().begin() + dst_section_id)->size());
+          break;
+        }
         std::string name = symbol.name();
         symbol_table_extend_size += entry_size;
         string_table_extend_size += name.size() + 1;
