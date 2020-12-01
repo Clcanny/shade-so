@@ -148,7 +148,7 @@ class Merger {
     merge_section(".data");
     merge_dot_text();
     merge_dot_symtab();
-    // output_binary_->patch_pltgot("_Z3foov", 2066);
+    merge_dot_dynsym();
     patch_pltgot();
     output_binary_->write(filename);
   }
@@ -222,10 +222,34 @@ class Merger {
         // Add filename.
         symbol.name(name);
         output_binary_->add_static_symbol(symbol);
+      } else {
+        if (symbol.type() != ELF_SYMBOL_TYPES::STT_NOTYPE &&
+            !output_binary_->has_static_symbol(symbol.name())) {
+          output_binary_->add_static_symbol(symbol);
+          symbol_table_extend_size += entry_size;
+        }
       }
     }
     extend_section(".symtab", symbol_table_extend_size);
     extend_section(".strtab", string_table_extend_size);
+  }
+
+  void merge_dot_dynsym() {
+    uint64_t symbol_table_extend_size = 0;
+    uint64_t entry_size = output_binary_->get_section(".dynsym").entry_size();
+    assert(entry_size == 24);
+    std::for_each(
+        src_binary_->dynamic_symbols().begin(),
+        src_binary_->dynamic_symbols().end(),
+        [this, &symbol_table_extend_size, entry_size](const Symbol& symbol) {
+          if (symbol.shndx() ==
+                  static_cast<uint16_t>(SYMBOL_SECTION_INDEX::SHN_UNDEF) &&
+              !output_binary_->has_dynamic_symbol(symbol.name())) {
+            output_binary_->add_dynamic_symbol(symbol);
+            symbol_table_extend_size += entry_size;
+          }
+        });
+    extend_section(".dynsym", symbol_table_extend_size);
   }
 
   void patch_pltgot() {
