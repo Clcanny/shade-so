@@ -148,7 +148,7 @@ class Merger {
     merge_section(".data");
     merge_dot_text();
     merge_dot_symtab();
-    merge_dot_dynsym();
+    merge_dot_rela_dot_plt();
     patch_pltgot();
     output_binary_->write(filename);
   }
@@ -234,22 +234,49 @@ class Merger {
     extend_section(".strtab", string_table_extend_size);
   }
 
-  void merge_dot_dynsym() {
-    uint64_t symbol_table_extend_size = 0;
-    uint64_t entry_size = output_binary_->get_section(".dynsym").entry_size();
-    assert(entry_size == 24);
+  // Value of DT_JMPREL dynamic entry is start address of .rela.plt section.
+  // readelf --dynamic main | grep -E "Tag|JMPREL"
+  // readelf --section-headers main | grep -E "Nr|.rela.plt" -A1
+  //
+  // Value of DT_RELA dynamic entry is start address of .rela.dyn section.
+  // readelf --dynamic main | grep -E "Tag|\(RELA\)"
+  // readelf --section-headers main | grep -E "Nr|.rela.dyn" -A1
+  void merge_dot_rela_dot_plt() {
+    uint64_t rela_plt_extend_size = 0;
+    uint64_t rela_plt_entry_size =
+        output_binary_->get_section(".rela.plt").entry_size();
+    assert(rela_plt_entry_size == 24);
     std::for_each(
-        src_binary_->dynamic_symbols().begin(),
-        src_binary_->dynamic_symbols().end(),
-        [this, &symbol_table_extend_size, entry_size](const Symbol& symbol) {
-          if (symbol.shndx() ==
-                  static_cast<uint16_t>(SYMBOL_SECTION_INDEX::SHN_UNDEF) &&
-              !output_binary_->has_dynamic_symbol(symbol.name())) {
-            output_binary_->add_dynamic_symbol(symbol);
-            symbol_table_extend_size += entry_size;
+        src_binary_->pltgot_relocations().begin(),
+        src_binary_->pltgot_relocations().end(),
+        [this, &rela_plt_extend_size, rela_plt_entry_size](
+            LIEF::ELF::Relocation reloc) {
+          if (std::find_if(
+                  output_binary_->pltgot_relocations().begin(),
+                  output_binary_->pltgot_relocations().end(),
+                  [this, &rela_plt_extend_size, rela_plt_entry_size, &reloc](
+                      const LIEF::ELF::Relocation& re) {
+                    rela_plt_extend_size += rela_plt_entry_size;
+                    return reloc.symbol().name() == re.symbol().name();
+                  }) == output_binary_->pltgot_relocations().end()) {
+            // Add dynamic symbol.
+            auto it_dynamic_symbol =
+                std::find_if(output_binary_->dynamic_symbols().begin(),
+                             output_binary_->dynamic_symbols().end(),
+                             [&reloc](const LIEF::ELF::Symbol& symbol) {
+                               return reloc.symbol().name() == symbol.name();
+                             });
+            if (it_dynamic_symbol == output_binary_->dynamic_symbols().end()) {
+              output_binary_->add_dynamic_symbol(reloc.symbol());
+              it_dynamic_symbol = output_binary_->dynamic_symbols().end() - 1;
+            }
+            // Set r_info.
+            reloc.info(it_dynamic_symbol -
+                       output_binary_->dynamic_symbols().begin());
+            output_binary_->add_pltgot_relocation(reloc);
           }
         });
-    extend_section(".dynsym", symbol_table_extend_size);
+    extend_section(".rela.plt", rela_plt_extend_size);
   }
 
   void patch_pltgot() {
