@@ -250,31 +250,15 @@ class Merger {
         src_binary_->pltgot_relocations().begin(),
         src_binary_->pltgot_relocations().end(),
         [this, &rela_plt_extend_size, rela_plt_entry_size](
-            LIEF::ELF::Relocation reloc) {
-          if (std::find_if(
-                  output_binary_->pltgot_relocations().begin(),
-                  output_binary_->pltgot_relocations().end(),
-                  [this, &rela_plt_extend_size, rela_plt_entry_size, &reloc](
-                      const LIEF::ELF::Relocation& re) {
-                    rela_plt_extend_size += rela_plt_entry_size;
-                    return reloc.symbol().name() == re.symbol().name();
-                  }) == output_binary_->pltgot_relocations().end()) {
-            // Add dynamic symbol.
-            auto it_dynamic_symbol =
-                std::find_if(output_binary_->dynamic_symbols().begin(),
-                             output_binary_->dynamic_symbols().end(),
-                             [&reloc](const LIEF::ELF::Symbol& symbol) {
-                               return reloc.symbol().name() == symbol.name();
-                             });
-            if (it_dynamic_symbol == output_binary_->dynamic_symbols().end()) {
-              output_binary_->add_dynamic_symbol(reloc.symbol());
-              it_dynamic_symbol = output_binary_->dynamic_symbols().end() - 1;
-            }
-            // Set r_info.
-            reloc.info(it_dynamic_symbol -
-                       output_binary_->dynamic_symbols().begin());
-            output_binary_->add_pltgot_relocation(reloc);
-          }
+            const LIEF::ELF::Relocation& reloc) {
+          Relocation re(reloc);
+          // Add dynamic symbol.
+          assert(reloc.has_symbol());
+          re.symbol(&output_binary_->get_dynamic_symbol(reloc.symbol().name()));
+          // Add section.
+          assert(reloc.has_section());
+          re.section(&output_binary_->get_section(reloc.section().name()));
+          output_binary_->add_pltgot_relocation(re);
         });
     extend_section(".rela.plt", rela_plt_extend_size);
   }
@@ -380,7 +364,7 @@ class Merger {
   std::unique_ptr<Binary> src_binary_;
   std::unique_ptr<Binary> dst_binary_;
   std::unique_ptr<Binary> output_binary_;
-};
+};  // namespace ELF
 
 }  // namespace ELF
 }  // namespace LIEF
