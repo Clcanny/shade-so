@@ -148,6 +148,7 @@ class Merger {
     merge_section(".data");
     merge_dot_text();
     merge_dot_symtab();
+    merge_dynamic_symbol_table();
     merge_dot_rela_dot_plt();
     patch_pltgot();
     output_binary_->write(filename);
@@ -234,6 +235,25 @@ class Merger {
     extend_section(".strtab", string_table_extend_size);
   }
 
+  void merge_dynamic_symbol_table() {
+    uint32_t added_symbol_num = 0;
+    auto it_current = src_binary_->dynamic_symbols().begin();
+    auto it_end = src_binary_->dynamic_symbols().end();
+    // it_current++;
+    for (; it_current != it_end; it_current++) {
+      Symbol symbol = *it_current;
+      if (symbol.shndx() !=
+          static_cast<uint16_t>(SYMBOL_SECTION_INDEX::SHN_UNDEF)) {
+        symbol.value(output_binary_->get_static_symbol(symbol.name()).value());
+      }
+      output_binary_->add_dynamic_symbol(symbol);
+      added_symbol_num += 1;
+    }
+    uint64_t entry_size = output_binary_->get_section(".dynsym").entry_size();
+    assert(entry_size == 24);
+    extend_section(".dynsym", added_symbol_num * entry_size);
+  }
+
   // Value of DT_JMPREL dynamic entry is start address of .rela.plt section.
   // readelf --dynamic main | grep -E "Tag|JMPREL"
   // readelf --section-headers main | grep -E "Nr|.rela.plt" -A1
@@ -256,8 +276,14 @@ class Merger {
           assert(reloc.has_symbol());
           re.symbol(&output_binary_->get_dynamic_symbol(reloc.symbol().name()));
           // Add section.
-          assert(reloc.has_section());
-          re.section(&output_binary_->get_section(reloc.section().name()));
+          if (reloc.has_section()) {
+            re.section(&output_binary_->get_section(reloc.section().name()));
+          }
+          assert(src_binary_->has_section_with_va(reloc.address()));
+          re.address(reloc.address() -
+                     src_binary_->text_section().virtual_address() +
+                     output_binary_->text_section().virtual_address() +
+                     dst_binary_->text_section().size());
           output_binary_->add_pltgot_relocation(re);
         });
     extend_section(".rela.plt", rela_plt_extend_size);
