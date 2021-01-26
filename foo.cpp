@@ -6,8 +6,9 @@ namespace {
 int var = 1;
 
 void bar() {
-  std::cout << "bar" << std::endl;
+    std::cout << "bar" << std::endl;
 }
 }  // namespace
 void foo() {
+    bar();
 }

@@ -294,12 +294,16 @@ class Merger {
                 if (reloc.has_section()) {
                     re.section(
                         &output_binary_->get_section(reloc.section().name()));
+                } else {
+                    return;
                 }
                 assert(src_binary_->has_section_with_va(reloc.address()));
+                assert(reloc.has_section());
+                const std::string& name = reloc.section().name();
                 re.address(reloc.address() -
-                           src_binary_->text_section().virtual_address() +
-                           output_binary_->text_section().virtual_address() +
-                           dst_binary_->text_section().size());
+                           src_binary_->get_section(name).virtual_address() +
+                           output_binary_->get_section(name).virtual_address() +
+                           dst_binary_->get_section(name).size());
                 output_binary_->add_pltgot_relocation(re);
             });
         extend_section(".rela.plt", rela_plt_extend_size);
