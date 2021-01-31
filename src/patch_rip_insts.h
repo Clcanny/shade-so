@@ -5,8 +5,8 @@
 // Created: 2021/01/31
 // Description
 
-#ifndef SRC_PATCH_RIP_ADDRS_H_
-#define SRC_PATCH_RIP_ADDRS_H_
+#ifndef SRC_PATCH_RIP_INSTS_H_
+#define SRC_PATCH_RIP_INSTS_H_
 
 #include <cstdint>
 #include <string>
@@ -40,4 +40,4 @@ class PatchRipInsts {
 }  // namespace ELF
 }  // namespace LIEF
 
-#endif  // SRC_PATCH_RIP_ADDRS_H_
+#endif  // SRC_PATCH_RIP_INSTS_H_

@@ -5,7 +5,7 @@
 // Created: 2021/01/31
 // Description
 
-#include "src/patch_rip_addrs.h"
+#include "src/patch_rip_insts.h"
 
 #include <Zydis/Zydis.h>
 
