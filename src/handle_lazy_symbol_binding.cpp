@@ -69,12 +69,6 @@ void HandleLazySymbolBinding::extend(uint64_t entries_num) {
     out_->extend(dynsym, dynsym.entry_size() * entries_num);
 
     // No need to handle .dynstr, LIEF will handle it.
-    src_->dynamic_symbols() | std::views::filter([](const Symbol& sym) {
-        return sym.shndx() ==
-               static_cast<uint16_t>(SYMBOL_SECTION_INDEX::SHN_UNDEF);
-    }) | std::views::transform([](const Symbol& sym) {
-        return sym.name().size() + 1;
-    });
 }
 
 void HandleLazySymbolBinding::add_plt(uint64_t src_id) {
