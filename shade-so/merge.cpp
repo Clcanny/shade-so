@@ -143,6 +143,35 @@ class RipRegisterPatcher {
     ZydisDecoder decoder_;
 };
 
+class HandleLazySymbolBinding {
+ public:
+    HandleLazySymbolBinding(Binary* src, Binary* dst, Binary* output)
+        : src_(src), dst_(dst), output_(output) {
+        assert(src_);
+        assert(dst_);
+        assert(output_);
+    }
+
+    void operator()() {
+    }
+
+ private:
+    void check_tables_size() {
+    }
+
+    void extend_tables();
+    void add_plt(int32_t origin_id);
+    void add_got_plt(int32_t origin_id);
+    void add_rela_plt(int32_t origin_id);
+    void add_undef_dynsym(int32_t origin_id);
+    void add_dynstr(int32_t origin_id);
+
+ private:
+    Binary* src_;
+    Binary* dst_;
+    Binary* output_;
+};
+
 class Merger {
  public:
     Merger(const std::string& src_file, const std::string& dst_file)
@@ -301,7 +330,7 @@ class Merger {
                         &output_binary_->get_section(reloc.section().name()));
                 } else {
                     // std::cout << "none" << std::endl;
-                        return;
+                    //     return;
                 }
                 assert(src_binary_->has_section_with_va(reloc.address()));
                 const std::string& name =
@@ -454,7 +483,7 @@ HandleLazySymbolBinding::HandleLazySymbolBinding(Binary* src,
 uint64_t HandleLazySymbolBinding::check() const {
     const Section& plt = src_->get_section(".plt");
     assert(plt.entry_size() != 0);
-    uint64_t plt_entries_num = plt.size() / plt.entry_size();
+    uint64_t plt_entires_num = plt.size() / plt.entry_size();
     assert(plt_entries_num >= 1);
     plt_entries_num -= 1;
 
@@ -471,8 +500,8 @@ uint64_t HandleLazySymbolBinding::check() const {
     assert(rela_plt_num == plt_entries_num);
 
     uint64_t undef_dynsym_entries_num = std::count_if(
-        std::begin(src_->dynamic_symbols()),
-        std::end(src_->dynamic_symbols()),
+        std::cbegin(src_->dynamic_symbols()),
+        std::cend(src_->dynamic_symbols()),
         [](const Symbol& sym) {
             return sym.shndx() ==
                    static_cast<uint16_t>(SYMBOL_SECTION_INDEX::SHN_UNDEF);
