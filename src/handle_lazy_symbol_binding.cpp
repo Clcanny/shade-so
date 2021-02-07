@@ -5,12 +5,13 @@
 // Created: 2020/10/13
 // Description
 
-#include "handle_lazy_symbol_binding.h"
+#include "src/handle_lazy_symbol_binding.h"
 
 #include <algorithm>
 #include <cassert>
 #include <numeric>
-#include <ranges>
+
+#include "src/extend_section.h"
 
 namespace LIEF {
 namespace ELF {
@@ -24,7 +25,7 @@ HandleLazySymbolBinding::HandleLazySymbolBinding(Binary* src,
     assert(out_);
 }
 
-uint64_t HandleLazySymbolBinding::check() const {
+uint64_t HandleLazySymbolBinding::operator()() {
     const Section& plt = src_->get_section(".plt");
     assert(plt.entry_size() != 0);
     uint64_t plt_entries_num = plt.size() / plt.entry_size();
@@ -57,18 +58,19 @@ uint64_t HandleLazySymbolBinding::check() const {
 
 void HandleLazySymbolBinding::extend(uint64_t entries_num) {
     const Section& plt = out_->get_section(".plt");
-    out_->extend(plt, plt.entry_size() * entries_num);
+    ExtendSection()(out_, ".plt.got", plt.entry_size() * entries_num);
 
     const Section& got_plt = out_->get_section(".plt.got");
-    out_->extend(got_plt, got_plt.entry_size() * entries_num);
+    ExtendSection()(out_, ".plt.got", got_plt.entry_size() * entries_num);
 
     const Section& rela_plt = out_->get_section(".rela.plt");
-    out_->extend(rela_plt, rela_plt.entry_size() * entries_num);
+    ExtendSection()(out_, ".rela.plt", rela_plt.entry_size() * entries_num);
 
     const Section& dynsym = out_->get_section(".dynsym");
-    out_->extend(dynsym, dynsym.entry_size() * entries_num);
+    ExtendSection()(out_, ".dynsym", dynsym.entry_size() * entries_num);
 
-    // No need to handle .dynstr, LIEF will handle it.
+    // I use a very loose upper bound here.
+    ExtendSection()(out_, ".dynstr", src_->get_section(".dynstr").size());
 }
 
 void HandleLazySymbolBinding::add_plt(uint64_t src_id) {

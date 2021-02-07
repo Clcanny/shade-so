@@ -1,20 +1,11 @@
-all : clean compile run
+build-image : build_image.sh Dockerfile
+	./build_image.sh
 
-clean :
-	rm -f libfoo.so main merge main-hooked
+run-container : run_container.sh
+	./run_container.sh
 
 compile :
-	g++ -std=c++11 foo.cpp -O0 -ggdb -shared -fPIC -o libfoo.so
-	gcc main.cpp -O0 -ggdb                   \
-		-L${PWD} -Wl,-rpath=${PWD} -lfoo     \
-		-Wl,--dynamic-linker=/root/glibc/build/install/lib/ld-linux-x86-64.so.2 -o main
-	g++ -std=c++11 -O0 -ggdb merge.cpp                                                   \
+	g++ -std=c++2a -O0 -ggdb -c handle_lazy_symbol_binding.cpp                           \
 		-I/usr/include/LIEF-0.11.0-Linux/include -L/usr/lib/LIEF-0.11.0-Linux/lib -lLIEF \
-        -I/usr/local/include/Zydis -I/usr/local/include/Zycore -L/usr/local/lib -lZydis  \
-        -o merge
-
-run :
-	./merge
-	chmod u+x main-hooked
-	export LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:/lib/x86_64-linux-gnu
-	./main-hooked
+		-I..                                                                             \
+        -o handle_lazy_symbol_binding.o

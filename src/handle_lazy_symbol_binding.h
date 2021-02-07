@@ -5,8 +5,8 @@
 // Created: 2021/01/31
 // Description
 
-#ifndef SHADE_SO_HANDLE_LAZY_SYMBOL_BINDING_H_
-#define SHADE_SO_HANDLE_LAZY_SYMBOL_BINDING_H_
+#ifndef SRC_HANDLE_LAZY_SYMBOL_BINDING_H_
+#define SRC_HANDLE_LAZY_SYMBOL_BINDING_H_
 
 #include <cstdint>
 
@@ -19,7 +19,7 @@ class HandleLazySymbolBinding {
  public:
     HandleLazySymbolBinding(Binary* src, Binary* dst, Binary* output);
 
-    void operator()();
+    uint64_t operator()();
 
  private:
     uint64_t check() const;
@@ -39,4 +39,4 @@ class HandleLazySymbolBinding {
 }  // namespace ELF
 }  // namespace LIEF
 
-#endif  // SHADE_SO_HANDLE_LAZY_SYMBOL_BINDING_H_
+#endif  // SRC_HANDLE_LAZY_SYMBOL_BINDING_H_

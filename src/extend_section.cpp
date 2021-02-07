@@ -10,6 +10,8 @@
 #include <array>
 #include <cassert>
 
+#include "src/patch_rip_insts.h"
+
 namespace LIEF {
 namespace ELF {
 
@@ -47,7 +49,7 @@ void ExtendSection::patch_rip_addrs(Binary* bin,
                                     uint64_t size) {
     for (const std::string& name :
          std::array<std::string, 4>{".init", ".text", ".plt", ".plt.got"}) {
-        RipRegisterPatcher(bin, name, insert_at, size).patch();
+        PatchRipInsts(bin, name, insert_at, size)();
     }
 }
 
