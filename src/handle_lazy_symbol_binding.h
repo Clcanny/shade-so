@@ -8,6 +8,8 @@
 #ifndef SRC_HANDLE_LAZY_SYMBOL_BINDING_H_
 #define SRC_HANDLE_LAZY_SYMBOL_BINDING_H_
 
+#include <Zydis/Zydis.h>
+
 #include <cstdint>
 
 #include <LIEF/ELF.hpp>
@@ -34,6 +36,7 @@ class HandleLazySymbolBinding {
     Binary* src_;
     Binary* dst_;
     Binary* out_;
+    ZydisDecoder decoder_;
 };
 
 }  // namespace ELF

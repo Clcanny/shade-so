@@ -9,8 +9,11 @@
 
 #include <algorithm>
 #include <cassert>
+#include <iterator>
 #include <numeric>
+#include <vector>
 
+#include "src/const.h"
 #include "src/extend_section.h"
 
 namespace LIEF {
@@ -23,24 +26,24 @@ HandleLazySymbolBinding::HandleLazySymbolBinding(Binary* src,
     assert(src_);
     assert(dst_);
     assert(out_);
+
+    ZydisDecoderInit(
+        &decoder_, ZYDIS_MACHINE_MODE_LONG_64, ZYDIS_ADDRESS_WIDTH_64);
 }
 
 uint64_t HandleLazySymbolBinding::operator()() {
     const Section& plt = src_->get_section(".plt");
-    assert(plt.entry_size() != 0);
     uint64_t plt_entries_num = plt.size() / plt.entry_size();
     assert(plt_entries_num >= 1);
     plt_entries_num -= 1;
 
     const Section& got_plt = src_->get_section(".got.plt");
-    assert(got_plt.entry_size() != 0);
     uint64_t got_plt_entries_num = got_plt.size() / got_plt.entry_size();
     assert(got_plt_entries_num >= 3);
     got_plt_entries_num -= 3;
     assert(got_plt_entries_num == plt_entries_num);
 
     const Section& rela_plt = src_->get_section(".rela.plt");
-    assert(rela_plt.entry_size() != 0);
     uint64_t rela_plt_num = rela_plt.size() / rela_plt.entry_size();
     assert(rela_plt_num == plt_entries_num);
 
@@ -75,18 +78,19 @@ void HandleLazySymbolBinding::extend(uint64_t entries_num) {
 
 void HandleLazySymbolBinding::add_plt(uint64_t src_id) {
     Section& plt = src_->get_section(".plt");
+    std::vector<uint8_t> content = plt.content();
     // The first entry of .plt section is a stub.
-    // uint64_t begin = (src_id + 1) * plt.entry_size();
-    // uint64_t end = (src_id + 2) * plt.entry_size();
-    // uint64_t offset = begin;
-    // uint64_t instrCnt = 0;
-    // while (offset < end) {
-    //     ZydisDecodedInstruction instr;
-    //     assert(ZYAN_SUCCESS(ZydisDecoderDecodeBuffer(
-    //         &decoder_, plt.content() + i, end - i, &instr)));
-    //     offset += instr.length;
-    // }
-    // assert(offset == end);
+    uint64_t begin = (src_id + 1) * plt.entry_size();
+    uint64_t end = (src_id + 2) * plt.entry_size();
+    uint64_t offset = begin;
+    uint64_t instrCnt = 0;
+    while (offset < end) {
+        ZydisDecodedInstruction instr;
+        assert(ZYAN_SUCCESS(ZydisDecoderDecodeBuffer(
+            &decoder_, content.data() + offset, end - offset, &instr)));
+        offset += instr.length;
+    }
+    assert(offset == end);
 }
 
 }  // namespace ELF

@@ -1,4 +1,3 @@
-libfoo.so
-main
-merge
-main-hooked
+*.o
+*.so
+*.out
