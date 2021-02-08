@@ -6,10 +6,6 @@ add_executable (merge.out
     patch_rip_insts.cpp
     validate_format.cpp
 )
-target_link_libraries(merge.out
-    libLIEF.a
-    libZydis.a
-)
 target_include_directories (merge.out PRIVATE
     ${PROJECT_SOURCE_DIR}
     ${SPDLOG_INSTALL_DIR}/include
@@ -20,4 +16,12 @@ target_link_directories (merge.out PRIVATE
     ${SPDLOG_INSTALL_DIR}/lib
     ${LIEF_INSTALL_DIR}/lib
     ${ZYDIS_INSTALL_DIR}/lib
+)
+target_link_libraries(merge.out
+    libLIEF.a
+    libZydis.a
+)
+add_custom_command (TARGET merge.out
+    POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy merge.out ${CMAKE_BINARY_DIR}/tests/merge.out
 )

@@ -38,3 +38,4 @@ ExternalProject_Add (
 )
 
 add_subdirectory (src)
+add_subdirectory (tests)
