@@ -23,17 +23,18 @@ ExternalProject_Add (
     PREFIX         ${THIRDPARTY_DIR}
     GIT_REPOSITORY https://github.com/Clcanny/LIEF
     GIT_TAG        devMaster
-    INSTALL_DIR    ${LIEF_INSTALL_DIR}
+    CMAKE_ARGS     -DCMAKE_INSTALL_PREFIX=${LIEF_INSTALL_DIR}
     BUILD_COMMAND  make -j${N}
 )
 
 set (ZYDIS_INSTALL_DIR ${THIRDPARTY_INSTALL_DIR}/zydis)
 ExternalProject_Add (
     zydis
-    PREFIX         ${THIRDPARTY_DIR}
-    GIT_REPOSITORY https://github.com/zyantific/zydis.git
-    GIT_TAG        ba9431cf143f89f29343d0c3d737935545627367
-    INSTALL_DIR    ${ZYDIS_INSTALL_DIR}
+    PREFIX          ${THIRDPARTY_DIR}
+    GIT_REPOSITORY  https://github.com/zyantific/zydis.git
+    GIT_TAG         ba9431cf143f89f29343d0c3d737935545627367
+    CMAKE_ARGS      -DCMAKE_INSTALL_PREFIX=${ZYDIS_INSTALL_DIR}
+    INSTALL_COMMAND make install
 )
 
 add_subdirectory (src)
