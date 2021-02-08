@@ -15,9 +15,9 @@ int main() {
     std::unique_ptr<LIEF::ELF::Binary> src(
         LIEF::ELF::Parser::parse("libfoo.so"));
     std::unique_ptr<LIEF::ELF::Binary> dst(
-        LIEF::ELF::Parser::parse("test.out"));
+        LIEF::ELF::Parser::parse("main.out"));
     std::unique_ptr<LIEF::ELF::Binary> out(
-        LIEF::ELF::Parser::parse("test.out"));
+        LIEF::ELF::Parser::parse("main.out"));
 
     shade_so::HandleLazySymbolBinding(src.get(), dst.get(), out.get())();
 }

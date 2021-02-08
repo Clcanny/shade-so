@@ -20,8 +20,9 @@ target_link_directories (merge.out PRIVATE
 target_link_libraries(merge.out
     libLIEF.a
     libZydis.a
+    # pthread
 )
 add_custom_command (TARGET merge.out
     POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy merge.out ${CMAKE_BINARY_DIR}/tests/merge.out
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/merge.out ${CMAKE_BINARY_DIR}/merge.out
 )
