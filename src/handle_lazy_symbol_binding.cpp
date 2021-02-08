@@ -13,16 +13,16 @@
 #include <numeric>
 #include <vector>
 
-// #include "spdlog/sinks/file_sinks.h"
-// #include "spdlog/spdlog.h"
+#include "spdlog/sinks/file_sinks.h"
+#include "spdlog/spdlog.h"
 #include "src/const.h"
 #include "src/extend_section.h"
 
 namespace shade_so {
 namespace {
 
-// static auto kLogger = spdlog::rotating_logger_mt(
-//     "HandleLazySymbolBinding", "logs/shade_so.LOG", 5 * 1024 * 1024, 3);
+static auto kLogger = spdlog::rotating_logger_mt(
+    "HandleLazySymbolBinding", "logs/shade_so.LOG", 5 * 1024 * 1024, 3);
 
 }  // namespace
 
@@ -101,7 +101,7 @@ void HandleLazySymbolBinding::add_plt(uint64_t src_id) {
 
         if (i == 0) {
             assert(instr.mnemonic == ZYDIS_MNEMONIC_PUSH);
-            // kLogger->info("The 1st instruction of plt stub is push.");
+            kLogger->info("The 1st instruction of plt stub is push.");
             std::cout << "here" << std::endl;
         }
         instr.operand_count;
