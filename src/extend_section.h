@@ -12,10 +12,12 @@
 
 #include <LIEF/ELF.hpp>
 
-namespace LIEF {
-namespace ELF {
+namespace shade_so {
 
 class ExtendSection {
+    using Binary = LIEF::ELF::Binary;
+    using Section = LIEF::ELF::Section;
+
  public:
     uint64_t operator()(Binary* bin, const std::string& name, uint64_t size);
 
@@ -29,7 +31,6 @@ class ExtendSection {
     uint64_t size_;
 };
 
-}  // namespace ELF
-}  // namespace LIEF
+}  // namespace shade_so
 
 #endif  // SRC_EXTEND_SECTION_H_

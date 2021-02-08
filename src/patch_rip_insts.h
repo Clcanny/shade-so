@@ -16,10 +16,13 @@
 
 #include <LIEF/ELF.hpp>
 
-namespace LIEF {
-namespace ELF {
+namespace shade_so {
 
 class PatchRipInsts {
+    using Binary = LIEF::ELF::Binary;
+    using Section = LIEF::ELF::Section;
+    using Symbol = LIEF::ELF::Symbol;
+
  public:
     PatchRipInsts(Binary* bin,
                   const std::string& target_section,
@@ -43,7 +46,6 @@ class PatchRipInsts {
     ZydisFormatter formatter_;
 };
 
-}  // namespace ELF
-}  // namespace LIEF
+}  // namespace shade_so
 
 #endif  // SRC_PATCH_RIP_INSTS_H_

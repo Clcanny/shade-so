@@ -12,8 +12,7 @@
 
 #include "src/patch_rip_insts.h"
 
-namespace LIEF {
-namespace ELF {
+namespace shade_so {
 
 uint64_t ExtendSection::operator()(Binary* bin,
                                    const std::string& name,
@@ -53,5 +52,4 @@ void ExtendSection::patch_rip_addrs(Binary* bin,
     }
 }
 
-}  // namespace ELF
-}  // namespace LIEF
+}  // namespace shade_so

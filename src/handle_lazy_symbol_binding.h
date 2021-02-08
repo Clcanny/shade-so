@@ -14,10 +14,13 @@
 
 #include <LIEF/ELF.hpp>
 
-namespace LIEF {
-namespace ELF {
+namespace shade_so {
 
 class HandleLazySymbolBinding {
+    using Binary = LIEF::ELF::Binary;
+    using Section = LIEF::ELF::Section;
+    using Symbol = LIEF::ELF::Symbol;
+
  public:
     HandleLazySymbolBinding(Binary* src, Binary* dst, Binary* output);
 
@@ -39,7 +42,6 @@ class HandleLazySymbolBinding {
     ZydisDecoder decoder_;
 };
 
-}  // namespace ELF
-}  // namespace LIEF
+}  // namespace shade_so
 
 #endif  // SRC_HANDLE_LAZY_SYMBOL_BINDING_H_

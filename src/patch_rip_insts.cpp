@@ -13,8 +13,7 @@
 #include <cassert>
 #include <cstddef>
 
-namespace LIEF {
-namespace ELF {
+namespace shade_so {
 
 PatchRipInsts::PatchRipInsts(Binary* bin,
                              const std::string& target_section,
@@ -105,5 +104,4 @@ int64_t PatchRipInsts::get_addend(const ZydisDecodedInstruction& inst,
     }
 }
 
-}  // namespace ELF
-}  // namespace LIEF
+}  // namespace shade_so

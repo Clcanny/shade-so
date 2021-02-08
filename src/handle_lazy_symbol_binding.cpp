@@ -16,8 +16,7 @@
 #include "src/const.h"
 #include "src/extend_section.h"
 
-namespace LIEF {
-namespace ELF {
+namespace shade_so {
 
 HandleLazySymbolBinding::HandleLazySymbolBinding(Binary* src,
                                                  Binary* dst,
@@ -52,10 +51,12 @@ uint64_t HandleLazySymbolBinding::operator()() {
         std::end(src_->dynamic_symbols()),
         [](const Symbol& sym) {
             return sym.shndx() ==
-                   static_cast<uint16_t>(SYMBOL_SECTION_INDEX::SHN_UNDEF);
+                   static_cast<uint16_t>(
+                       LIEF::ELF::SYMBOL_SECTION_INDEX::SHN_UNDEF);
         });
     // assert(undef_dynsym_entries_num == plt_entries_num);
 
+    add_plt(0);
     return plt_entries_num;
 }
 
@@ -77,12 +78,29 @@ void HandleLazySymbolBinding::extend(uint64_t entries_num) {
 }
 
 void HandleLazySymbolBinding::add_plt(uint64_t src_id) {
-    Section& plt = src_->get_section(".plt");
+    LIEF::ELF::Section& plt = src_->get_section(section_names::kPlt);
     std::vector<uint8_t> content = plt.content();
+    uint8_t* data = content.data();
+    auto size = plt.entry_size();
+
     // The first entry of .plt section is a stub.
+    decltype(size) offset = 0;
+    for (int i = 0; i < 3; i++) {
+        ZydisDecodedInstruction instr;
+        assert(ZYAN_SUCCESS(ZydisDecoderDecodeBuffer(
+            &decoder_, data + offset, plt.entry_size() - offset, &instr)));
+        offset += instr.length;
+
+        if (i == 0) {
+            assert(instr.mnemonic == ZYDIS_MNEMONIC_PUSH);
+        }
+        instr.operand_count;
+    }
+
     uint64_t begin = (src_id + 1) * plt.entry_size();
     uint64_t end = (src_id + 2) * plt.entry_size();
-    uint64_t offset = begin;
+    // uint64_t offset = begin;
+    offset = begin;
     uint64_t instrCnt = 0;
     while (offset < end) {
         ZydisDecodedInstruction instr;
@@ -93,5 +111,4 @@ void HandleLazySymbolBinding::add_plt(uint64_t src_id) {
     assert(offset == end);
 }
 
-}  // namespace ELF
-}  // namespace LIEF
+}  // namespace shade_so
