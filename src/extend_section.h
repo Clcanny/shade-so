@@ -22,6 +22,11 @@ class ExtendSection {
  private:
     uint64_t ceil_size(const Section& section, uint64_t size);
     void patch_rip_addrs(Binary* bin, uint64_t insert_at, uint64_t size);
+
+ private:
+    Binary* bin_;
+    std::string name_;
+    uint64_t size_;
 };
 
 }  // namespace ELF

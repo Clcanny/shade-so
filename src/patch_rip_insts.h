@@ -8,6 +8,8 @@
 #ifndef SRC_PATCH_RIP_INSTS_H_
 #define SRC_PATCH_RIP_INSTS_H_
 
+#include <Zydis/Zydis.h>
+
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -22,8 +24,12 @@ class PatchRipInsts {
     PatchRipInsts(Binary* bin,
                   const std::string& target_section,
                   uint64_t extend_after,
-                  extend_size);
+                  uint64_t extend_size);
     void operator()();
+
+ private:
+    bool patch_memory_type_operand(const ZydisDecodedInstruction& inst);
+    int64_t get_addend(const ZydisDecodedInstruction& inst, uint64_t disp);
 
  private:
     Binary* bin_;

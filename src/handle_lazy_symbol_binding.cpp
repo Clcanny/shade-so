@@ -54,7 +54,7 @@ uint64_t HandleLazySymbolBinding::operator()() {
             return sym.shndx() ==
                    static_cast<uint16_t>(SYMBOL_SECTION_INDEX::SHN_UNDEF);
         });
-    assert(undef_dynsym_entries_num == plt_entries_num);
+    // assert(undef_dynsym_entries_num == plt_entries_num);
 
     return plt_entries_num;
 }
