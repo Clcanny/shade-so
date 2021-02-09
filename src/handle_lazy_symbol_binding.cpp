@@ -111,7 +111,7 @@ void HandleLazySymbolBinding::add_plt(uint64_t src_id) {
                 return operand.visibility == ZYDIS_OPERAND_VISIBILITY_EXPLICIT;
             };
             assert(std::count_if(begin, end, is_visible_operand) == 1);
-            kLogger->debug("The 1st instruction has 3 visible operands.");
+            kLogger->debug("The 1st instruction has 1 visible operands.");
 
             const ZydisDecodedOperand& operand =
                 *std::find_if(begin, end, is_visible_operand);
@@ -132,6 +132,31 @@ void HandleLazySymbolBinding::add_plt(uint64_t src_id) {
         } else if (i == 1) {
             assert(instr.mnemonic == ZYDIS_MNEMONIC_JMP);
             kLogger->debug("The 2nd instruction of plt stub is jmp.");
+
+            auto begin = instr.operands;
+            auto end = instr.operands + instr.operand_count;
+            auto is_visible_operand = [](const ZydisDecodedOperand& operand) {
+                return operand.visibility == ZYDIS_OPERAND_VISIBILITY_EXPLICIT;
+            };
+            assert(std::count_if(begin, end, is_visible_operand) == 1);
+            kLogger->debug("The 2nd instruction has 1 visible operands.");
+
+            const ZydisDecodedOperand& operand =
+                *std::find_if(begin, end, is_visible_operand);
+            assert(operand.visibility == ZYDIS_OPERAND_VISIBILITY_EXPLICIT &&
+                   operand.type == ZYDIS_OPERAND_TYPE_MEMORY &&
+                   operand.mem.base == ZYDIS_REGISTER_RIP &&
+                   operand.mem.disp.has_displacement);
+            uint64_t rip = plt.virtual_address() + offset;
+            uint64_t arg = rip + operand.mem.disp.value;
+            kLogger->debug("Jump argument is 0x{0:x}.", arg);
+            uint64_t expected =
+                got_plt.virtual_address() + 2 * got_plt.entry_size();
+            kLogger->debug(
+                "Start addr of the 3rd entry of {} section is 0x{:x}.",
+                section_names::kGotPlt,
+                expected);
+            assert(arg == expected);
         } else if (i == 2) {
             assert(instr.mnemonic == ZYDIS_MNEMONIC_NOP);
             kLogger->debug("The 3rd instruction of plt stub is nop.");
