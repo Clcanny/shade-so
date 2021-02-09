@@ -9,9 +9,12 @@
 
 #include <LIEF/ELF.hpp>
 
+#include "spdlog/spdlog.h"
 #include "src/handle_lazy_symbol_binding.h"
 
 int main() {
+    spdlog::set_level(spdlog::level::debug);
+
     std::unique_ptr<LIEF::ELF::Binary> src(
         LIEF::ELF::Parser::parse("libfoo.so"));
     std::unique_ptr<LIEF::ELF::Binary> dst(

@@ -101,8 +101,13 @@ void HandleLazySymbolBinding::add_plt(uint64_t src_id) {
 
         if (i == 0) {
             assert(instr.mnemonic == ZYDIS_MNEMONIC_PUSH);
-            kLogger->info("The 1st instruction of plt stub is push.");
-            std::cout << "here" << std::endl;
+            kLogger->debug("The 1st instruction of plt stub is push.");
+        } else if (i == 1) {
+            assert(instr.mnemonic == ZYDIS_MNEMONIC_JMP);
+            kLogger->debug("The 2nd instruction of plt stub is jmp.");
+        } else if (i == 2) {
+            assert(instr.mnemonic == ZYDIS_MNEMONIC_NOP);
+            kLogger->debug("The 3rd instruction of plt stub is nop.");
         }
         instr.operand_count;
     }
