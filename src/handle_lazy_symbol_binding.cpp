@@ -102,6 +102,21 @@ void HandleLazySymbolBinding::add_plt(uint64_t src_id) {
         if (i == 0) {
             assert(instr.mnemonic == ZYDIS_MNEMONIC_PUSH);
             kLogger->debug("The 1st instruction of plt stub is push.");
+            auto begin = instr.operands;
+            auto end = instr.operands + instr.operand_count;
+            auto is_visible_operand = [](const ZydisDecodedOperand& operand) {
+                return operand.visibility == ZYDIS_OPERAND_VISIBILITY_EXPLICIT;
+            };
+            assert(std::count_if(begin, end, is_visible_operand) == 1);
+            const ZydisDecodedOperand& operand =
+                *std::find_if(begin, end, is_visible_operand);
+            assert(operand.visibility == ZYDIS_OPERAND_VISIBILITY_EXPLICIT &&
+                   operand.type == ZYDIS_OPERAND_TYPE_MEMORY &&
+                   operand.mem.base == ZYDIS_REGISTER_RIP &&
+                   operand.mem.disp.has_displacement);
+            uint64_t rip = plt.virtual_address() + offset;
+            uint64_t value = rip + operand.mem.disp.value;
+            kLogger->debug("Push argument is 0x{0:x}.", value);
         } else if (i == 1) {
             assert(instr.mnemonic == ZYDIS_MNEMONIC_JMP);
             kLogger->debug("The 2nd instruction of plt stub is jmp.");
