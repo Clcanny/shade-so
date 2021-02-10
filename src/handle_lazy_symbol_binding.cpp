@@ -91,9 +91,8 @@ void HandleLazySymbolBinding::add_plt(uint64_t src_id) {
     uint8_t* data = content.data();
     auto size = plt.entry_size();
 
-    LIEF::ELF::Section& got_plt = src_->get_section(section_names::kGotPlt);
-
     // The first entry of .plt section is a stub.
+    LIEF::ELF::Section& got_plt = src_->get_section(section_names::kGotPlt);
     decltype(size) offset = 0;
     for (int i = 0; i < 3; i++) {
         ZydisDecodedInstruction instr;
@@ -101,6 +100,8 @@ void HandleLazySymbolBinding::add_plt(uint64_t src_id) {
             &decoder_, data + offset, plt.entry_size() - offset, &instr)));
         offset += instr.length;
 
+        // TODO(junbin.rjb)
+        // Refactor.
         if (i == 0) {
             assert(instr.mnemonic == ZYDIS_MNEMONIC_PUSH);
             kLogger->debug("The 1st instruction of plt stub is push.");
@@ -115,8 +116,7 @@ void HandleLazySymbolBinding::add_plt(uint64_t src_id) {
 
             const ZydisDecodedOperand& operand =
                 *std::find_if(begin, end, is_visible_operand);
-            assert(operand.visibility == ZYDIS_OPERAND_VISIBILITY_EXPLICIT &&
-                   operand.type == ZYDIS_OPERAND_TYPE_MEMORY &&
+            assert(operand.type == ZYDIS_OPERAND_TYPE_MEMORY &&
                    operand.mem.base == ZYDIS_REGISTER_RIP &&
                    operand.mem.disp.has_displacement);
             uint64_t rip = plt.virtual_address() + offset;
@@ -143,8 +143,7 @@ void HandleLazySymbolBinding::add_plt(uint64_t src_id) {
 
             const ZydisDecodedOperand& operand =
                 *std::find_if(begin, end, is_visible_operand);
-            assert(operand.visibility == ZYDIS_OPERAND_VISIBILITY_EXPLICIT &&
-                   operand.type == ZYDIS_OPERAND_TYPE_MEMORY &&
+            assert(operand.type == ZYDIS_OPERAND_TYPE_MEMORY &&
                    operand.mem.base == ZYDIS_REGISTER_RIP &&
                    operand.mem.disp.has_displacement);
             uint64_t rip = plt.virtual_address() + offset;
@@ -161,7 +160,6 @@ void HandleLazySymbolBinding::add_plt(uint64_t src_id) {
             assert(instr.mnemonic == ZYDIS_MNEMONIC_NOP);
             kLogger->debug("The 3rd instruction of plt stub is nop.");
         }
-        instr.operand_count;
     }
 
     uint64_t begin = (src_id + 1) * plt.entry_size();
@@ -169,13 +167,44 @@ void HandleLazySymbolBinding::add_plt(uint64_t src_id) {
     // uint64_t offset = begin;
     offset = begin;
     uint64_t instrCnt = 0;
-    while (offset < end) {
+    for (int i = 0; i < 3; i++) {
         ZydisDecodedInstruction instr;
         assert(ZYAN_SUCCESS(ZydisDecoderDecodeBuffer(
             &decoder_, content.data() + offset, end - offset, &instr)));
         offset += instr.length;
+
+        if (i == 0) {
+            assert(instr.mnemonic == ZYDIS_MNEMONIC_JMP);
+            kLogger->debug("The 1st instruction of plt entry is jmp.");
+
+            auto begin = instr.operands;
+            auto end = instr.operands + instr.operand_count;
+            auto is_visible_operand = [](const ZydisDecodedOperand& operand) {
+                return operand.visibility == ZYDIS_OPERAND_VISIBILITY_EXPLICIT;
+            };
+            assert(std::count_if(begin, end, is_visible_operand) == 1);
+            kLogger->debug("The 2nd instruction has 1 visible operands.");
+
+            const ZydisDecodedOperand& operand =
+                *std::find_if(begin, end, is_visible_operand);
+            assert(operand.type == ZYDIS_OPERAND_TYPE_MEMORY &&
+                   operand.mem.base == ZYDIS_REGISTER_RIP &&
+                   operand.mem.disp.has_displacement);
+            uint64_t rip = plt.virtual_address() + offset;
+            uint64_t arg = rip + operand.mem.disp.value;
+            kLogger->debug("Jump argument is 0x{0:x}.", arg);
+            uint64_t expected = got_plt.virtual_address() +
+                                (3 + src_id) * got_plt.entry_size();
+            kLogger->debug("0x{:x}", got_plt.entry_size());
+            kLogger->debug(
+                "Start addr of the 3rd entry of {} section is 0x{:x}.",
+                section_names::kGotPlt,
+                expected);
+            assert(arg == expected);
+        }
     }
     assert(offset == end);
+    kLogger->debug("here");
 }
 
 }  // namespace shade_so
