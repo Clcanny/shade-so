@@ -15,7 +15,15 @@
 #include <cstddef>
 #include <cstring>
 
+#include "spdlog/spdlog.h"
+
 namespace shade_so {
+namespace {
+
+static auto kLogger = spdlog::rotating_logger_mt(
+    "PatchRipInsts", "logs/shade_so.LOG", 5 * 1024 * 1024, 3);
+
+}  // namespace
 
 PatchRipInsts::PatchRipInsts(Binary* dst, Binary* out) : dst_(dst), out_(out) {
     assert(dst_ != nullptr);
@@ -78,7 +86,6 @@ void PatchRipInsts::patch(const std::string& sec_name) {
             assert(ZYAN_SUCCESS(ZydisCalcAbsoluteAddress(
                 &inst, &operand, dst_rip - inst.length, &dst_jump_to)));
             assert(dst_jump_to == dst_rip + disp);
-            std::cout << "here" << std::endl;
 
             assert(dst_->has_section_with_va(dst_jump_to));
             const Section& dst_to_sec = dst_->get_section_with_va(dst_jump_to);
@@ -108,6 +115,19 @@ void PatchRipInsts::patch(const std::string& sec_name) {
                 &new_out_jump_to)));
             assert(new_out_jump_to - out_to_sec.virtual_address() ==
                    dst_jump_to - dst_to_sec.virtual_address());
+
+            uint64_t out_cur_va = out_sec.virtual_address() + offset;
+            char origin_buf[256];
+            ZydisFormatterFormatInstruction(
+                &formatter_, &inst, origin_buf, sizeof(origin_buf), out_cur_va);
+            char new_buf[256];
+            ZydisFormatterFormatInstruction(
+                &formatter_, &new_inst, new_buf, sizeof(new_buf), out_cur_va);
+            kLogger->info(
+                "Instruction at 0x{:x} changes from '{:s}' to '{:s}'.",
+                out_cur_va,
+                origin_buf,
+                new_buf);
         }
         offset += inst.length;
     }
