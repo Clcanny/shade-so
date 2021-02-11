@@ -16,6 +16,7 @@
 #include "spdlog/sinks/file_sinks.h"
 #include "spdlog/spdlog.h"
 #include "src/const.h"
+#include "src/elf.h"
 #include "src/extend_section.h"
 
 namespace shade_so {
@@ -177,16 +178,16 @@ void HandleLazySymbolBinding::add_plt(uint64_t src_id) {
             assert(instr.mnemonic == ZYDIS_MNEMONIC_JMP);
             kLogger->debug("The 1st instruction of plt entry is jmp.");
 
-            auto begin = instr.operands;
-            auto end = instr.operands + instr.operand_count;
+            auto b = instr.operands;
+            auto e = instr.operands + instr.operand_count;
             auto is_visible_operand = [](const ZydisDecodedOperand& operand) {
                 return operand.visibility == ZYDIS_OPERAND_VISIBILITY_EXPLICIT;
             };
-            assert(std::count_if(begin, end, is_visible_operand) == 1);
+            assert(std::count_if(b, e, is_visible_operand) == 1);
             kLogger->debug("The 2nd instruction has 1 visible operands.");
 
             const ZydisDecodedOperand& operand =
-                *std::find_if(begin, end, is_visible_operand);
+                *std::find_if(b, e, is_visible_operand);
             assert(operand.type == ZYDIS_OPERAND_TYPE_MEMORY &&
                    operand.mem.base == ZYDIS_REGISTER_RIP &&
                    operand.mem.disp.has_displacement);
@@ -201,6 +202,12 @@ void HandleLazySymbolBinding::add_plt(uint64_t src_id) {
                 section_names::kGotPlt,
                 expected);
             assert(arg == expected);
+            // Get got entry.
+            std::vector<uint8_t> g = got_plt.content();
+            uint64_t* d = reinterpret_cast<uint64_t*>(g.data());
+            // Other place has checked size of got entry.
+            kLogger->debug("got: 0x{:x}", d[src_id + 3]);
+            assert(d[src_id + 3] == plt.virtual_address() + offset);
         } else if (i == 1) {
             assert(instr.mnemonic == ZYDIS_MNEMONIC_PUSH);
             kLogger->debug("The 2nd instruction of plt stub is push.");
@@ -217,6 +224,13 @@ void HandleLazySymbolBinding::add_plt(uint64_t src_id) {
             assert(operand.type == ZYDIS_OPERAND_TYPE_IMMEDIATE &&
                    operand.imm.is_signed == 1 && operand.imm.is_relative == 0 &&
                    operand.imm.value.s == src_id);
+
+            const Section& rela_plt = src_->get_section(".rela.plt");
+            std::vector<uint8_t> r = rela_plt.content();
+            Elf64_Rela* er = reinterpret_cast<Elf64_Rela*>(r.data());
+            assert(er[src_id].r_offset ==
+                   got_plt.virtual_address() +
+                       (3 + src_id) * got_plt.entry_size());
         } else if (i == 2) {
             assert(instr.mnemonic == ZYDIS_MNEMONIC_JMP);
             kLogger->debug("The 1st instruction of plt entry is jmp.");

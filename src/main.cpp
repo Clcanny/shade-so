@@ -14,6 +14,7 @@
 
 int main() {
     spdlog::set_level(spdlog::level::debug);
+    // spdlog::set_pattern("[source %s] [function %!] [line %#] %v");
 
     std::unique_ptr<LIEF::ELF::Binary> src(
         LIEF::ELF::Parser::parse("libfoo.so"));
