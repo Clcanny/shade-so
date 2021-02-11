@@ -221,22 +221,34 @@ void HandleLazySymbolBinding::add_plt(uint64_t src_id) {
             assert(instr.mnemonic == ZYDIS_MNEMONIC_JMP);
             kLogger->debug("The 1st instruction of plt entry is jmp.");
 
-            auto begin = instr.operands;
-            auto end = instr.operands + instr.operand_count;
+            auto b = instr.operands;
+            auto e = instr.operands + instr.operand_count;
             auto is_visible_operand = [](const ZydisDecodedOperand& operand) {
                 return operand.visibility == ZYDIS_OPERAND_VISIBILITY_EXPLICIT;
             };
-            assert(std::count_if(begin, end, is_visible_operand) == 1);
+            assert(std::count_if(b, e, is_visible_operand) == 1);
             kLogger->debug("The 2nd instruction has 1 visible operands.");
 
             const ZydisDecodedOperand& operand =
-                *std::find_if(begin, end, is_visible_operand);
+                *std::find_if(b, e, is_visible_operand);
             assert(operand.type == ZYDIS_OPERAND_TYPE_IMMEDIATE &&
                    operand.imm.is_signed == 1 && operand.imm.is_relative == 1);
             kLogger->debug("{:x}", plt.entry_size());
             kLogger->debug("{:d}", 1 + src_id);
             assert(operand.imm.value.s == -1 * (2 + src_id) * plt.entry_size());
+            uint64_t ra = begin + offset;
+            assert(ZYAN_SUCCESS(ZydisCalcAbsoluteAddress(
+                &instr,
+                &operand,
+                plt.virtual_address() + offset - instr.length,
+                &ra)));
+            kLogger->debug("0x{:x}, 0x{:x}, 0x{:x}, 0x{:x}",
+                           plt.virtual_address(),
+                           begin,
+                           offset,
+                           ra);
         }
+        // offset += instr.length;
     }
     assert(offset == end);
     kLogger->debug("here");
