@@ -19,16 +19,16 @@ class ExtendSection {
     using Section = LIEF::ELF::Section;
 
  public:
-    uint64_t operator()(Binary* bin, const std::string& name, uint64_t size);
+    ExtendSection(Binary* bin, const std::string& name, uint64_t size);
+    uint64_t operator()();
 
  private:
-    uint64_t ceil_size(const Section& section, uint64_t size);
-    void patch_rip_addrs(Binary* bin, uint64_t insert_at, uint64_t size);
+    void ceil_size();
 
  private:
-    // Binary* bin_;
-    // std::string name_;
-    // uint64_t size_;
+    Binary* bin_;
+    const Section& section_;
+    uint64_t size_;
 };
 
 }  // namespace shade_so

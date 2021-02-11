@@ -24,24 +24,15 @@ class PatchRipInsts {
     using Symbol = LIEF::ELF::Symbol;
 
  public:
-    PatchRipInsts(Binary* bin,
-                  const std::string& target_section,
-                  uint64_t extend_after,
-                  uint64_t extend_size);
+    PatchRipInsts(Binary* dst, Binary* out);
     void operator()();
 
  private:
-    bool patch_memory_type_operand(const ZydisDecodedInstruction& inst);
-    int64_t get_addend(const ZydisDecodedInstruction& inst, uint64_t disp);
+    void patch(const std::string& target_sec_name);
 
  private:
-    Binary* bin_;
-    uint64_t sec_va_;
-    uint64_t cur_va_;
-    std::vector<uint8_t> content_;
-    uint64_t extend_after_;
-    uint64_t extend_size_;
-
+    Binary* dst_;
+    Binary* out_;
     ZydisDecoder decoder_;
     ZydisFormatter formatter_;
 };

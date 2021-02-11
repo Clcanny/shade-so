@@ -11,6 +11,7 @@
 
 #include "spdlog/spdlog.h"
 #include "src/handle_lazy_symbol_binding.h"
+#include "src/patch_rip_insts.h"
 
 int main() {
     spdlog::set_level(spdlog::level::debug);
@@ -24,5 +25,6 @@ int main() {
         LIEF::ELF::Parser::parse("main.out"));
 
     shade_so::HandleLazySymbolBinding(src.get(), dst.get(), out.get())();
+    shade_so::PatchRipInsts(dst.get(), out.get())();
     out->write("modified-main.out");
 }

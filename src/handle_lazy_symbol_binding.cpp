@@ -72,19 +72,19 @@ uint64_t HandleLazySymbolBinding::operator()() {
 
 void HandleLazySymbolBinding::extend(uint64_t entries_num) {
     const Section& plt = out_->get_section(".plt");
-    ExtendSection()(out_, ".plt.got", plt.entry_size() * entries_num);
+    ExtendSection(out_, ".plt.got", plt.entry_size() * entries_num)();
 
     const Section& got_plt = out_->get_section(".plt.got");
-    ExtendSection()(out_, ".plt.got", got_plt.entry_size() * entries_num);
+    ExtendSection(out_, ".plt.got", got_plt.entry_size() * entries_num)();
 
     const Section& rela_plt = out_->get_section(".rela.plt");
-    ExtendSection()(out_, ".rela.plt", rela_plt.entry_size() * entries_num);
+    ExtendSection(out_, ".rela.plt", rela_plt.entry_size() * entries_num)();
 
     const Section& dynsym = out_->get_section(".dynsym");
-    ExtendSection()(out_, ".dynsym", dynsym.entry_size() * entries_num);
+    ExtendSection(out_, ".dynsym", dynsym.entry_size() * entries_num)();
 
     // I use a very loose upper bound here.
-    ExtendSection()(out_, ".dynstr", src_->get_section(".dynstr").size());
+    ExtendSection(out_, ".dynstr", src_->get_section(".dynstr").size())();
 }
 
 void HandleLazySymbolBinding::add_plt(uint64_t src_id) {

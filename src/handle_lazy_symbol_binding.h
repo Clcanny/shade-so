@@ -22,8 +22,7 @@ class HandleLazySymbolBinding {
     using Symbol = LIEF::ELF::Symbol;
 
  public:
-    HandleLazySymbolBinding(Binary* src, Binary* dst, Binary* output);
-
+    HandleLazySymbolBinding(Binary* src, Binary* dst, Binary* out);
     uint64_t operator()();
 
  private:

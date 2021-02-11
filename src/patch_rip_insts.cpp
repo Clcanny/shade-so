@@ -10,94 +10,100 @@
 #include <Zydis/Zydis.h>
 
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <cstddef>
+#include <cstring>
 
 namespace shade_so {
 
-PatchRipInsts::PatchRipInsts(Binary* bin,
-                             const std::string& target_section,
-                             uint64_t extend_after,
-                             uint64_t extend_size)
-    : bin_(bin), sec_va_(0), cur_va_(0),  //
-      extend_after_(extend_after), extend_size_(extend_size) {
-    assert(bin_ != nullptr);
-    const Section& sec = bin_->get_section(target_section);
-    sec_va_ = sec.virtual_address();
-    assert(sec_va_ != 0);
-    cur_va_ = sec_va_;
-    content_ = sec.content();
-
+PatchRipInsts::PatchRipInsts(Binary* dst, Binary* out) : dst_(dst), out_(out) {
+    assert(dst_ != nullptr);
+    assert(out_ != nullptr);
     ZydisDecoderInit(
         &decoder_, ZYDIS_MACHINE_MODE_LONG_64, ZYDIS_ADDRESS_WIDTH_64);
     ZydisFormatterInit(&formatter_, ZYDIS_FORMATTER_STYLE_INTEL);
 }
 
 void PatchRipInsts::operator()() {
-    ZydisDecodedInstruction inst;
-    for (; cur_va_ < sec_va_ + content_.size() &&
-           ZYAN_SUCCESS(
-               ZydisDecoderDecodeBuffer(&decoder_,
-                                        content_.data() + (cur_va_ - sec_va_),
-                                        content_.size() - (cur_va_ - sec_va_),
-                                        &inst));
-         cur_va_ += inst.length) {
-        patch_memory_type_operand(inst);
+    for (const std::string& sec_name :
+         std::array<std::string, 4>{".init", ".text", ".plt", ".plt.got"}) {
+        patch(sec_name);
     }
-    assert(cur_va_ == sec_va_ + content_.size());
 }
 
-bool PatchRipInsts::patch_memory_type_operand(
-    const ZydisDecodedInstruction& inst) {
-    auto begin = &inst.operands[0];
-    auto end = &inst.operands[0] + inst.operand_count;
-    auto is_mem_type_operand = [](const ZydisDecodedOperand& operand) {
-        return operand.type == ZYDIS_OPERAND_TYPE_MEMORY &&
-               operand.mem.base == ZYDIS_REGISTER_RIP &&
-               operand.mem.disp.has_displacement;
-    };
+void PatchRipInsts::patch(const std::string& sec_name) {
+    const Section& dst_sec = dst_->get_section(sec_name);
+    std::vector<uint8_t> dst_content = dst_sec.content();
+    const Section& out_sec = out_->get_section(sec_name);
+    std::vector<uint8_t> out_content = out_sec.content();
+    assert(out_content.size() >= dst_content.size());
+    std::memcmp(dst_content.data(), out_content.data(), dst_content.size());
 
-    int cnt = std::count_if(begin, end, is_mem_type_operand);
-    assert(cnt <= 1);
-    if (cnt == 0) {
-        return false;
-    }
+    uint64_t offset = 0;
+    while (offset < dst_content.size()) {
+        ZydisDecodedInstruction inst;
+        assert(
+            ZYAN_SUCCESS(ZydisDecoderDecodeBuffer(&decoder_,
+                                                  out_content.data() + offset,
+                                                  out_content.size() - offset,
+                                                  &inst)));
+        offset += inst.length;
 
-    const ZydisDecodedOperand* p =
-        std::find_if(begin, end, is_mem_type_operand);
-    assert(p < end);
-    const ZydisDecodedOperand& operand = *p;
-    uint64_t disp = 0;
-    const std::size_t operand_offset = inst.raw.disp.offset,
-                      operand_size = inst.raw.disp.size / 8;
-    for (std::size_t i = 0; i < operand_size; i++) {
-        disp |= (content_.data()[(cur_va_ - sec_va_) + operand_offset + i] * 1L)
-                << (8 * i);
-    }
-    assert(disp == operand.mem.disp.value);
+        // [begin, end)
+        auto begin = &inst.operands[0] - 1;
+        auto end = &inst.operands[0] + inst.operand_count;
+        while ((begin = std::find_if(
+                    begin + 1, end, [](const ZydisDecodedOperand& operand) {
+                        return operand.mem.type != ZYDIS_MEMOP_TYPE_INVALID &&
+                               operand.mem.base == ZYDIS_REGISTER_RIP;
+                    })) != end) {
+            const ZydisDecodedOperand& operand = *begin;
+            if (operand.mem.disp.has_displacement) {
+                // TODO(junbin.rjb)
+                // kLogger->warning();
+                continue;
+            }
+            const auto operand_offset = inst.raw.disp.offset;
+            const auto operand_size = inst.raw.disp.size / 8;
+            uint64_t disp = 0;
+            for (auto i = 0; i < operand_size; i++) {
+                auto t = out_content[offset + operand_offset + i] * 1L;
+                disp |= t << (8 * i);
+            }
+            assert(disp == operand.mem.disp.value);
+            // offset has already been add inst.length.
+            uint64_t dst_rip = dst_sec.virtual_address() + offset;
+            // TODO(junbin.rjb)
+            // Add or lea?
+            uint64_t dst_jump_to = dst_rip + disp;
+            uint64_t ra = 0;
+            ZydisCalcAbsoluteAddress(&inst, &operand, dst_rip, &ra);
+            assert(ra == dst_rip + disp);
+            std::cout << "here" << std::endl;
 
-    disp += get_addend(inst, disp);
-    std::vector<uint8_t> bytes_to_be_patched;
-    for (std::size_t i = 0; i < operand_size; i++) {
-        bytes_to_be_patched.emplace_back((disp >> (8 * i)) & 0xFF);
-    }
-    bin_->patch_address(cur_va_ + operand_offset, bytes_to_be_patched);
-    return true;
-}
+            // assert(dst_->has_section_with_va(dst_jump_to));
+            // const Section& dst_to_sec = dst_->get_section_with_va(jump_to);
+            // const Section& out_to_sec = dst_->get_section(dst_to_sec.name());
+            // int64_t addend =
+            //     out_to_sec.virtual_address() - dst_to_sec.virtual_address();
+            // assert(addend >= 0);
+            // disp += out_to_sec.virtual_address() -
+            // dst_to_sec.virtual_address();
+            // // TODO(junbin.rjb)
+            // // ZydisCalcAbsoluteAddress
+            // std::vector<uint8_t> bytes_to_be_patched;
+            // for (std::size_t i = 0; i < operand_size; i++) {
+            //     bytes_to_be_patched.emplace_back((disp >> (8 * i)) & 0xFF);
+            // }
+            // out_->patch_address(cur_va_ + operand_offset,
+            // bytes_to_be_patched);
 
-int64_t PatchRipInsts::get_addend(const ZydisDecodedInstruction& inst,
-                                  uint64_t disp) {
-    uint64_t rip = cur_va_ + inst.length;
-    int64_t direction = (rip + disp >= extend_after_ ? 1 : -1) +
-                        (cur_va_ >= extend_after_ ? -1 : 1);
-    return extend_size_;
-    if (direction > 0) {
-        return extend_size_;
-    } else if (direction == 0) {
-        return 0;
-    } else {
-        return -1 * extend_size_;
+            // TODO(junbin.rjb)
+            // Assert code of out is same as dst.
+        }
     }
+    assert(offset == dst_content.size());
 }
 
 }  // namespace shade_so
