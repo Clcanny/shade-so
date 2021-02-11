@@ -73,33 +73,41 @@ void PatchRipInsts::patch(const std::string& sec_name) {
             assert(disp == operand.mem.disp.value);
             // offset has already been add inst.length.
             uint64_t dst_rip = dst_sec.virtual_address() + offset + inst.length;
-            // TODO(junbin.rjb)
-            // Add or lea?
-            uint64_t dst_jump_to = dst_rip + disp;
-            uint64_t ra = 0;
-            ZydisCalcAbsoluteAddress(&inst, &operand, dst_rip - inst.length, &ra);
-            assert(ra == dst_rip + disp);
+            // Note: I assume operator is addition.
+            uint64_t dst_jump_to = 0;
+            assert(ZYAN_SUCCESS(ZydisCalcAbsoluteAddress(
+                &inst, &operand, dst_rip - inst.length, &dst_jump_to)));
+            assert(dst_jump_to == dst_rip + disp);
             std::cout << "here" << std::endl;
 
-            // assert(dst_->has_section_with_va(dst_jump_to));
-            // const Section& dst_to_sec = dst_->get_section_with_va(jump_to);
-            // const Section& out_to_sec = dst_->get_section(dst_to_sec.name());
-            // int64_t addend =
-            //     out_to_sec.virtual_address() - dst_to_sec.virtual_address();
-            // assert(addend >= 0);
-            // disp += out_to_sec.virtual_address() -
-            // dst_to_sec.virtual_address();
-            // // TODO(junbin.rjb)
-            // // ZydisCalcAbsoluteAddress
-            // std::vector<uint8_t> bytes_to_be_patched;
-            // for (std::size_t i = 0; i < operand_size; i++) {
-            //     bytes_to_be_patched.emplace_back((disp >> (8 * i)) & 0xFF);
-            // }
-            // out_->patch_address(cur_va_ + operand_offset,
-            // bytes_to_be_patched);
+            assert(dst_->has_section_with_va(dst_jump_to));
+            const Section& dst_to_sec = dst_->get_section_with_va(dst_jump_to);
+            const Section& out_to_sec = dst_->get_section(dst_to_sec.name());
+            uint64_t out_rip = out_sec.virtual_address() + offset + inst.length;
+            disp = out_to_sec.virtual_address() +
+                   (dst_jump_to - dst_to_sec.virtual_address()) - out_rip;
+            std::vector<uint8_t> bytes_to_be_patched;
+            for (std::size_t i = 0; i < operand_size; i++) {
+                bytes_to_be_patched.emplace_back((disp >> (8 * i)) & 0xFF);
+            }
+            out_->patch_address(out_sec.virtual_address() + offset +
+                                    operand_offset,
+                                bytes_to_be_patched);
 
-            // TODO(junbin.rjb)
-            // Assert code of out is same as dst.
+            ZydisDecodedInstruction new_inst;
+            assert(ZYAN_SUCCESS(ZydisDecoderDecodeBuffer(
+                &decoder_,
+                out_->get_section(sec_name).content().data() + offset,
+                inst.length,
+                &new_inst)));
+            uint64_t new_out_jump_to = 0;
+            assert(ZYAN_SUCCESS(ZydisCalcAbsoluteAddress(
+                &new_inst,
+                &new_inst.operands[0] + (begin - &inst.operands[0]),
+                out_sec.virtual_address() + offset,
+                &new_out_jump_to)));
+            assert(new_out_jump_to - out_to_sec.virtual_address() ==
+                   dst_jump_to - dst_to_sec.virtual_address());
         }
         offset += inst.length;
     }
