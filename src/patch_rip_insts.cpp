@@ -90,15 +90,20 @@ void PatchRipInsts::patch(const std::string& sec_name) {
             assert(dst_->has_section_with_va(dst_jump_to));
             const Section& dst_to_sec = dst_->get_section_with_va(dst_jump_to);
             const Section& out_to_sec = dst_->get_section(dst_to_sec.name());
-            uint64_t out_rip = out_sec.virtual_address() + offset + inst.length;
-            disp = out_to_sec.virtual_address() +
-                   (dst_jump_to - dst_to_sec.virtual_address()) - out_rip;
+            uint64_t out_cur_va = out_sec.virtual_address() + offset;
+            uint64_t out_rip = out_cur_va + inst.length;
+            uint64_t new_disp = out_to_sec.virtual_address() +
+                                (dst_jump_to - dst_to_sec.virtual_address()) -
+                                out_rip;
+            kLogger->info("Rip addend at 0x{:x} changes from 0x{:x} to 0x{:x}.",
+                          out_cur_va,
+                          disp,
+                          new_disp);
             std::vector<uint8_t> bytes_to_be_patched;
             for (std::size_t i = 0; i < operand_size; i++) {
-                bytes_to_be_patched.emplace_back((disp >> (8 * i)) & 0xFF);
+                bytes_to_be_patched.emplace_back((new_disp >> (8 * i)) & 0xFF);
             }
-            out_->patch_address(out_sec.virtual_address() + offset +
-                                    operand_offset,
+            out_->patch_address(out_cur_va + operand_offset,
                                 bytes_to_be_patched);
 
             ZydisDecodedInstruction new_inst;
@@ -111,12 +116,11 @@ void PatchRipInsts::patch(const std::string& sec_name) {
             assert(ZYAN_SUCCESS(ZydisCalcAbsoluteAddress(
                 &new_inst,
                 &new_inst.operands[0] + (begin - &inst.operands[0]),
-                out_sec.virtual_address() + offset,
+                out_cur_va,
                 &new_out_jump_to)));
             assert(new_out_jump_to - out_to_sec.virtual_address() ==
                    dst_jump_to - dst_to_sec.virtual_address());
 
-            uint64_t out_cur_va = out_sec.virtual_address() + offset;
             char origin_buf[256];
             ZydisFormatterFormatInstruction(
                 &formatter_, &inst, origin_buf, sizeof(origin_buf), out_cur_va);
