@@ -22,6 +22,7 @@ target_link_libraries(merge.out
     libZydis.a
     pthread
 )
+add_dependencies (merge.out spdlog zydis lief)
 add_custom_command (TARGET merge.out
     POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/merge.out ${CMAKE_BINARY_DIR}/merge.out
