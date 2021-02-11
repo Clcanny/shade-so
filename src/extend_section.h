@@ -26,9 +26,9 @@ class ExtendSection {
     void patch_rip_addrs(Binary* bin, uint64_t insert_at, uint64_t size);
 
  private:
-    Binary* bin_;
-    std::string name_;
-    uint64_t size_;
+    // Binary* bin_;
+    // std::string name_;
+    // uint64_t size_;
 };
 
 }  // namespace shade_so

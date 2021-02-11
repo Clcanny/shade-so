@@ -18,7 +18,7 @@ uint64_t ExtendSection::operator()(Binary* bin,
                                    const std::string& name,
                                    uint64_t size) {
     assert(bin && size);
-    const Section& section = bin_->get_section(name_);
+    const Section& section = bin->get_section(name);
     size = ceil_size(section, size);
     bin->extend(section, size);
 
@@ -26,7 +26,7 @@ uint64_t ExtendSection::operator()(Binary* bin,
     if (va != 0) {
         patch_rip_addrs(bin, va + section.size(), size);
     }
-    return size_;
+    return size;
 }
 
 uint64_t ExtendSection::ceil_size(const Section& section, uint64_t size) {

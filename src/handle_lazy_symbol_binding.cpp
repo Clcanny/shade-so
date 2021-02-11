@@ -65,6 +65,7 @@ uint64_t HandleLazySymbolBinding::operator()() {
         });
     // assert(undef_dynsym_entries_num == plt_entries_num);
 
+    extend(plt_entries_num);
     add_plt(0);
     return plt_entries_num;
 }

@@ -39,3 +39,11 @@ ExternalProject_Add (
 
 add_subdirectory (src)
 add_subdirectory (tests)
+
+add_custom_target (tests
+    ALL rm -f modified-main.out
+    COMMAND ./merge.out
+    COMMAND chmod u+x modified-main.out
+    COMMAND ./modified-main.out
+    DEPENDS merge.out foo main.out
+)

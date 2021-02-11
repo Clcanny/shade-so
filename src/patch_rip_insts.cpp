@@ -60,12 +60,6 @@ bool PatchRipInsts::patch_memory_type_operand(
     int cnt = std::count_if(begin, end, is_mem_type_operand);
     assert(cnt <= 1);
     if (cnt == 0) {
-        char buf[256];
-        ZydisFormatterFormatInstruction(
-            &formatter_, &inst, buf, sizeof(buf), cur_va_);
-        // TODO(junbin.rjb)
-        // Use gabime/spdlog.
-        std::cout << "Can't patch rip addrs: " << buf << std::endl;
         return false;
     }
 
@@ -77,7 +71,8 @@ bool PatchRipInsts::patch_memory_type_operand(
     const std::size_t operand_offset = inst.raw.disp.offset,
                       operand_size = inst.raw.disp.size / 8;
     for (std::size_t i = 0; i < operand_size; i++) {
-        disp |= (content_.data()[cur_va_ + operand_offset + i] * 1L) << (8 * i);
+        disp |= (content_.data()[(cur_va_ - sec_va_) + operand_offset + i] * 1L)
+                << (8 * i);
     }
     assert(disp == operand.mem.disp.value);
 
@@ -95,6 +90,7 @@ int64_t PatchRipInsts::get_addend(const ZydisDecodedInstruction& inst,
     uint64_t rip = cur_va_ + inst.length;
     int64_t direction = (rip + disp >= extend_after_ ? 1 : -1) +
                         (cur_va_ >= extend_after_ ? -1 : 1);
+    return extend_size_;
     if (direction > 0) {
         return extend_size_;
     } else if (direction == 0) {

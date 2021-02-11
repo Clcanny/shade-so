@@ -24,4 +24,5 @@ int main() {
         LIEF::ELF::Parser::parse("main.out"));
 
     shade_so::HandleLazySymbolBinding(src.get(), dst.get(), out.get())();
+    out->write("modified-main.out");
 }
