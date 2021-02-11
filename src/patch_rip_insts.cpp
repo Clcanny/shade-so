@@ -89,7 +89,7 @@ void PatchRipInsts::patch(const std::string& sec_name) {
 
             assert(dst_->has_section_with_va(dst_jump_to));
             const Section& dst_to_sec = dst_->get_section_with_va(dst_jump_to);
-            const Section& out_to_sec = dst_->get_section(dst_to_sec.name());
+            const Section& out_to_sec = out_->get_section(dst_to_sec.name());
             uint64_t out_cur_va = out_sec.virtual_address() + offset;
             uint64_t out_rip = out_cur_va + inst.length;
             uint64_t new_disp = out_to_sec.virtual_address() +
