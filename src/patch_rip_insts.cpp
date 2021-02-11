@@ -48,7 +48,6 @@ void PatchRipInsts::patch(const std::string& sec_name) {
                                                   out_content.data() + offset,
                                                   out_content.size() - offset,
                                                   &inst)));
-        offset += inst.length;
 
         // [begin, end)
         auto begin = &inst.operands[0] - 1;
@@ -59,7 +58,7 @@ void PatchRipInsts::patch(const std::string& sec_name) {
                                operand.mem.base == ZYDIS_REGISTER_RIP;
                     })) != end) {
             const ZydisDecodedOperand& operand = *begin;
-            if (operand.mem.disp.has_displacement) {
+            if (!operand.mem.disp.has_displacement) {
                 // TODO(junbin.rjb)
                 // kLogger->warning();
                 continue;
@@ -73,12 +72,12 @@ void PatchRipInsts::patch(const std::string& sec_name) {
             }
             assert(disp == operand.mem.disp.value);
             // offset has already been add inst.length.
-            uint64_t dst_rip = dst_sec.virtual_address() + offset;
+            uint64_t dst_rip = dst_sec.virtual_address() + offset + inst.length;
             // TODO(junbin.rjb)
             // Add or lea?
             uint64_t dst_jump_to = dst_rip + disp;
             uint64_t ra = 0;
-            ZydisCalcAbsoluteAddress(&inst, &operand, dst_rip, &ra);
+            ZydisCalcAbsoluteAddress(&inst, &operand, dst_rip - inst.length, &ra);
             assert(ra == dst_rip + disp);
             std::cout << "here" << std::endl;
 
@@ -102,6 +101,7 @@ void PatchRipInsts::patch(const std::string& sec_name) {
             // TODO(junbin.rjb)
             // Assert code of out is same as dst.
         }
+        offset += inst.length;
     }
     assert(offset == dst_content.size());
 }
