@@ -60,6 +60,8 @@ void PatchRipInsts::patch(const std::string& sec_name) {
         if (inst.mnemonic == ZYDIS_MNEMONIC_CALL) {
             if (inst.operand_count >= 1) {
                 const ZydisDecodedOperand& operand = inst.operands[0];
+                // TODO(junbin.rjb)
+                // type = ZYDIS_OPERAND_TYPE_MEMORY
                 if (operand.visibility == ZYDIS_OPERAND_VISIBILITY_EXPLICIT &&
                     operand.type == ZYDIS_OPERAND_TYPE_IMMEDIATE) {
                     uint64_t dst_rip =
