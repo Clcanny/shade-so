@@ -57,73 +57,86 @@ void PatchRipInsts::patch(const std::string& sec_name) {
                                                   out_content.size() - offset,
                                                   &inst)));
 
-        if (inst.mnemonic == ZYDIS_MNEMONIC_CALL) {
-            if (inst.operand_count >= 1) {
-                const ZydisDecodedOperand& operand = inst.operands[0];
-                // TODO(junbin.rjb)
-                // type = ZYDIS_OPERAND_TYPE_MEMORY
-                if (operand.visibility == ZYDIS_OPERAND_VISIBILITY_EXPLICIT &&
-                    operand.type == ZYDIS_OPERAND_TYPE_IMMEDIATE) {
-                    uint64_t dst_rip =
-                        dst_sec.virtual_address() + offset + inst.length;
-                    uint64_t dst_jump_to = 0;
-                    assert(ZYAN_SUCCESS(ZydisCalcAbsoluteAddress(
-                        &inst, &operand, dst_rip - inst.length, &dst_jump_to)));
-                    std::cout << "0x" << std::hex << dst_jump_to << std::endl;
-
-                    // TODO(junbin.rjb)
-                    // I assume index of imm is zero.
-                    const auto operand_offset = inst.raw.imm[0].offset;
-                    const auto operand_size = inst.raw.imm[0].size / 8;
-                    // Ignore is_signed.
-                    int32_t imm = 0;
-                    for (auto i = 0; i < operand_size; i++) {
-                        auto t = out_content[offset + operand_offset + i] * 1L;
-                        imm |= t << (8 * i);
-                    }
-                    assert(imm == operand.imm.value.s);
-
-                    assert(dst_->has_section_with_va(dst_jump_to));
-                    const Section& dst_to_sec =
-                        dst_->get_section_with_va(dst_jump_to);
-                    const Section& out_to_sec =
-                        out_->get_section(dst_to_sec.name());
-                    uint64_t out_cur_va = out_sec.virtual_address() + offset;
-                    uint64_t out_rip = out_cur_va + inst.length;
-                    int32_t new_imm =
-                        out_to_sec.virtual_address() +
-                        (dst_jump_to - dst_to_sec.virtual_address()) - out_rip;
-
-                    std::vector<uint8_t> bytes_to_be_patched;
-                    for (std::size_t i = 0; i < operand_size; i++) {
-                        bytes_to_be_patched.emplace_back((new_imm >> (8 * i)) &
-                                                         0xFF);
-                    }
-                    out_->patch_address(out_cur_va + operand_offset,
-                                        bytes_to_be_patched);
-
-                    ZydisDecodedInstruction new_inst;
-                    assert(ZYAN_SUCCESS(ZydisDecoderDecodeBuffer(
-                        &decoder_,
-                        out_->get_section(sec_name).content().data() + offset,
-                        inst.length,
-                        &new_inst)));
-                    uint64_t new_out_jump_to = 0;
-                    assert(ZYAN_SUCCESS(
-                        ZydisCalcAbsoluteAddress(&new_inst,
-                                                 &new_inst.operands[0],
-                                                 out_cur_va,
-                                                 &new_out_jump_to)));
-                    assert(new_out_jump_to - out_to_sec.virtual_address() ==
-                           dst_jump_to - dst_to_sec.virtual_address());
-                    std::cout << "here" << std::endl;
+        // (begin, end)
+        auto begin = &inst.operands[0] - 1;
+        auto end = &inst.operands[0] + inst.operand_count;
+        for (int imm_operand_id = 0;
+             (begin = std::find_if(
+                  begin + 1,
+                  end,
+                  [](const ZydisDecodedOperand& operand) {
+                      return operand.visibility ==
+                                 ZYDIS_OPERAND_VISIBILITY_EXPLICIT &&
+                             operand.type == ZYDIS_OPERAND_TYPE_IMMEDIATE &&
+                             operand.imm.is_relative == ZYAN_TRUE;
+                  })) != end;
+             imm_operand_id++) {
+            assert(imm_operand_id < 2);
+            const ZydisDecodedOperand& operand = *begin;
+            // TODO(junbin.rjb)
+            // type = ZYDIS_OPERAND_TYPE_MEMORY
+            if (operand.visibility == ZYDIS_OPERAND_VISIBILITY_EXPLICIT &&
+                operand.type == ZYDIS_OPERAND_TYPE_IMMEDIATE &&
+                operand.imm.is_relative == ZYAN_TRUE) {
+                uint64_t dst_rip =
+                    dst_sec.virtual_address() + offset + inst.length;
+                uint64_t dst_jump_to = 0;
+                assert(ZYAN_SUCCESS(ZydisCalcAbsoluteAddress(
+                    &inst, &operand, dst_rip - inst.length, &dst_jump_to)));
+                // I assume index of imm is zero.
+                const auto operand_offset = inst.raw.imm[imm_operand_id].offset;
+                const auto operand_size = inst.raw.imm[imm_operand_id].size / 8;
+                // Ignore is_signed.
+                int32_t imm = 0;
+                for (auto i = 0; i < operand_size; i++) {
+                    auto t = out_content[offset + operand_offset + i] * 1L;
+                    imm |= t << (8 * i);
                 }
+                if (imm != operand.imm.value.s) {
+                    std::cout << "error" << std::endl;
+                    continue;
+                }
+                assert(imm == operand.imm.value.s);
+
+                assert(dst_->has_section_with_va(dst_jump_to));
+                const Section& dst_to_sec =
+                    dst_->get_section_with_va(dst_jump_to);
+                const Section& out_to_sec =
+                    out_->get_section(dst_to_sec.name());
+                uint64_t out_cur_va = out_sec.virtual_address() + offset;
+                uint64_t out_rip = out_cur_va + inst.length;
+                int32_t new_imm = out_to_sec.virtual_address() +
+                                  (dst_jump_to - dst_to_sec.virtual_address()) -
+                                  out_rip;
+
+                std::vector<uint8_t> bytes_to_be_patched;
+                for (std::size_t i = 0; i < operand_size; i++) {
+                    bytes_to_be_patched.emplace_back((new_imm >> (8 * i)) &
+                                                     0xFF);
+                }
+                out_->patch_address(out_cur_va + operand_offset,
+                                    bytes_to_be_patched);
+
+                ZydisDecodedInstruction new_inst;
+                assert(ZYAN_SUCCESS(ZydisDecoderDecodeBuffer(
+                    &decoder_,
+                    out_->get_section(sec_name).content().data() + offset,
+                    inst.length,
+                    &new_inst)));
+                uint64_t new_out_jump_to = 0;
+                assert(
+                    ZYAN_SUCCESS(ZydisCalcAbsoluteAddress(&new_inst,
+                                                          &new_inst.operands[0],
+                                                          out_cur_va,
+                                                          &new_out_jump_to)));
+                assert(new_out_jump_to - out_to_sec.virtual_address() ==
+                       dst_jump_to - dst_to_sec.virtual_address());
+                std::cout << "here" << std::endl;
             }
         }
 
-        // [begin, end)
-        auto begin = &inst.operands[0] - 1;
-        auto end = &inst.operands[0] + inst.operand_count;
+        begin = &inst.operands[0] - 1;
+        end = &inst.operands[0] + inst.operand_count;
         while ((begin = std::find_if(
                     begin + 1, end, [](const ZydisDecodedOperand& operand) {
                         return operand.mem.type != ZYDIS_MEMOP_TYPE_INVALID &&
