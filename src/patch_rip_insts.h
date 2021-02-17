@@ -23,12 +23,26 @@ class PatchRipInsts {
     using Section = LIEF::ELF::Section;
     using Symbol = LIEF::ELF::Symbol;
 
+    struct BriefValue {
+        uint64_t offset;
+        uint64_t size;
+        // Use int64_t to represent value of type int32_t, uint32_t, int64_t,
+        // uint64_t. I don't think overflow will happen in conversion from
+        // uint64_t to int64_t.
+        int64_t value;
+    };
+
  public:
     PatchRipInsts(Binary* dst, Binary* out);
     void operator()();
 
  private:
-    void patch(const std::string& target_sec_name);
+    void patch(const std::string& sec_name);
+    void
+    patch(const std::string& sec_name,
+          const std::function<bool(const ZydisDecodedOperand&)>& need_to_patch,
+          const std::function<BriefValue(const ZydisDecodedInstruction&, int)>&
+              extract);
 
  private:
     Binary* dst_;
