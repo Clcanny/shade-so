@@ -13,8 +13,8 @@
 #include <numeric>
 #include <vector>
 
-#include "spdlog/sinks/file_sinks.h"
-#include "spdlog/spdlog.h"
+// #include "spdlog/sinks/file_sinks.h"
+// #include "spdlog/spdlog.h"
 #include "src/const.h"
 #include "src/elf.h"
 #include "src/extend_section.h"
@@ -22,8 +22,8 @@
 namespace shade_so {
 namespace {
 
-static auto kLogger = spdlog::rotating_logger_mt(
-    "HandleLazySymbolBinding", "logs/shade_so.LOG", 5 * 1024 * 1024, 3);
+// static auto kLogger = spdlog::rotating_logger_mt(
+//     "HandleLazySymbolBinding", "logs/shade_so.LOG", 5 * 1024 * 1024, 3);
 
 }  // namespace
 
@@ -72,19 +72,19 @@ uint64_t HandleLazySymbolBinding::operator()() {
 
 void HandleLazySymbolBinding::extend(uint64_t entries_num) {
     const Section& plt = out_->get_section(".plt");
-    ExtendSection(out_, ".plt.got", plt.entry_size() * entries_num)();
+    ExtendSection(out_, ".plt", plt.entry_size() * entries_num)();
 
-    const Section& got_plt = out_->get_section(".plt.got");
-    ExtendSection(out_, ".plt.got", got_plt.entry_size() * entries_num)();
+    // const Section& got_plt = out_->get_section(".plt.got");
+    // ExtendSection(out_, ".plt.got", got_plt.entry_size() * entries_num)();
 
-    const Section& rela_plt = out_->get_section(".rela.plt");
-    ExtendSection(out_, ".rela.plt", rela_plt.entry_size() * entries_num)();
+    // const Section& rela_plt = out_->get_section(".rela.plt");
+    // ExtendSection(out_, ".rela.plt", rela_plt.entry_size() * entries_num)();
 
-    const Section& dynsym = out_->get_section(".dynsym");
-    ExtendSection(out_, ".dynsym", dynsym.entry_size() * entries_num)();
+    // const Section& dynsym = out_->get_section(".dynsym");
+    // ExtendSection(out_, ".dynsym", dynsym.entry_size() * entries_num)();
 
-    // I use a very loose upper bound here.
-    ExtendSection(out_, ".dynstr", src_->get_section(".dynstr").size())();
+    // // I use a very loose upper bound here.
+    // ExtendSection(out_, ".dynstr", src_->get_section(".dynstr").size())();
 }
 
 void HandleLazySymbolBinding::add_plt(uint64_t src_id) {
@@ -106,7 +106,7 @@ void HandleLazySymbolBinding::add_plt(uint64_t src_id) {
         // Refactor.
         if (i == 0) {
             assert(instr.mnemonic == ZYDIS_MNEMONIC_PUSH);
-            kLogger->debug("The 1st instruction of plt stub is push.");
+            // kLogger->debug("The 1st instruction of plt stub is push.");
 
             auto begin = instr.operands;
             auto end = instr.operands + instr.operand_count;
@@ -114,7 +114,7 @@ void HandleLazySymbolBinding::add_plt(uint64_t src_id) {
                 return operand.visibility == ZYDIS_OPERAND_VISIBILITY_EXPLICIT;
             };
             assert(std::count_if(begin, end, is_visible_operand) == 1);
-            kLogger->debug("The 1st instruction has 1 visible operands.");
+            // kLogger->debug("The 1st instruction has 1 visible operands.");
 
             const ZydisDecodedOperand& operand =
                 *std::find_if(begin, end, is_visible_operand);
@@ -123,17 +123,17 @@ void HandleLazySymbolBinding::add_plt(uint64_t src_id) {
                    operand.mem.disp.has_displacement);
             uint64_t rip = plt.virtual_address() + offset;
             uint64_t arg = rip + operand.mem.disp.value;
-            kLogger->debug("Push argument is 0x{0:x}.", arg);
+            // kLogger->debug("Push argument is 0x{0:x}.", arg);
             uint64_t expected =
                 got_plt.virtual_address() + 1 * got_plt.entry_size();
-            kLogger->debug(
-                "Start addr of the 2nd entry of {} section is 0x{:x}.",
-                section_names::kGotPlt,
-                expected);
+            // kLogger->debug(
+            //     "Start addr of the 2nd entry of {} section is 0x{:x}.",
+            //     section_names::kGotPlt,
+            //     expected);
             assert(arg == expected);
         } else if (i == 1) {
             assert(instr.mnemonic == ZYDIS_MNEMONIC_JMP);
-            kLogger->debug("The 2nd instruction of plt stub is jmp.");
+            // kLogger->debug("The 2nd instruction of plt stub is jmp.");
 
             auto begin = instr.operands;
             auto end = instr.operands + instr.operand_count;
@@ -141,7 +141,7 @@ void HandleLazySymbolBinding::add_plt(uint64_t src_id) {
                 return operand.visibility == ZYDIS_OPERAND_VISIBILITY_EXPLICIT;
             };
             assert(std::count_if(begin, end, is_visible_operand) == 1);
-            kLogger->debug("The 2nd instruction has 1 visible operands.");
+            // kLogger->debug("The 2nd instruction has 1 visible operands.");
 
             const ZydisDecodedOperand& operand =
                 *std::find_if(begin, end, is_visible_operand);
@@ -150,17 +150,17 @@ void HandleLazySymbolBinding::add_plt(uint64_t src_id) {
                    operand.mem.disp.has_displacement);
             uint64_t rip = plt.virtual_address() + offset;
             uint64_t arg = rip + operand.mem.disp.value;
-            kLogger->debug("Jump argument is 0x{0:x}.", arg);
+            // kLogger->debug("Jump argument is 0x{0:x}.", arg);
             uint64_t expected =
                 got_plt.virtual_address() + 2 * got_plt.entry_size();
-            kLogger->debug(
-                "Start addr of the 3rd entry of {} section is 0x{:x}.",
-                section_names::kGotPlt,
-                expected);
+            // kLogger->debug(
+            //     "Start addr of the 3rd entry of {} section is 0x{:x}.",
+            //     section_names::kGotPlt,
+            //     expected);
             assert(arg == expected);
         } else if (i == 2) {
             assert(instr.mnemonic == ZYDIS_MNEMONIC_NOP);
-            kLogger->debug("The 3rd instruction of plt stub is nop.");
+            // kLogger->debug("The 3rd instruction of plt stub is nop.");
         }
     }
 
@@ -177,7 +177,7 @@ void HandleLazySymbolBinding::add_plt(uint64_t src_id) {
 
         if (i == 0) {
             assert(instr.mnemonic == ZYDIS_MNEMONIC_JMP);
-            kLogger->debug("The 1st instruction of plt entry is jmp.");
+            // kLogger->debug("The 1st instruction of plt entry is jmp.");
 
             auto b = instr.operands;
             auto e = instr.operands + instr.operand_count;
@@ -185,7 +185,7 @@ void HandleLazySymbolBinding::add_plt(uint64_t src_id) {
                 return operand.visibility == ZYDIS_OPERAND_VISIBILITY_EXPLICIT;
             };
             assert(std::count_if(b, e, is_visible_operand) == 1);
-            kLogger->debug("The 2nd instruction has 1 visible operands.");
+            // kLogger->debug("The 2nd instruction has 1 visible operands.");
 
             const ZydisDecodedOperand& operand =
                 *std::find_if(b, e, is_visible_operand);
@@ -194,24 +194,24 @@ void HandleLazySymbolBinding::add_plt(uint64_t src_id) {
                    operand.mem.disp.has_displacement);
             uint64_t rip = plt.virtual_address() + offset;
             uint64_t arg = rip + operand.mem.disp.value;
-            kLogger->debug("Jump argument is 0x{0:x}.", arg);
+            // kLogger->debug("Jump argument is 0x{0:x}.", arg);
             uint64_t expected =
                 got_plt.virtual_address() + (3 + src_id) * got_plt.entry_size();
-            kLogger->debug("0x{:x}", got_plt.entry_size());
-            kLogger->debug(
-                "Start addr of the 3rd entry of {} section is 0x{:x}.",
-                section_names::kGotPlt,
-                expected);
+            // kLogger->debug("0x{:x}", got_plt.entry_size());
+            // kLogger->debug(
+            //     "Start addr of the 3rd entry of {} section is 0x{:x}.",
+            //     section_names::kGotPlt,
+            //     expected);
             assert(arg == expected);
             // Get got entry.
             std::vector<uint8_t> g = got_plt.content();
             uint64_t* d = reinterpret_cast<uint64_t*>(g.data());
             // Other place has checked size of got entry.
-            kLogger->debug("got: 0x{:x}", d[src_id + 3]);
+            // kLogger->debug("got: 0x{:x}", d[src_id + 3]);
             assert(d[src_id + 3] == plt.virtual_address() + offset);
         } else if (i == 1) {
             assert(instr.mnemonic == ZYDIS_MNEMONIC_PUSH);
-            kLogger->debug("The 2nd instruction of plt stub is push.");
+            // kLogger->debug("The 2nd instruction of plt stub is push.");
 
             auto begin = instr.operands;
             auto end = instr.operands + instr.operand_count;
@@ -219,7 +219,7 @@ void HandleLazySymbolBinding::add_plt(uint64_t src_id) {
                 return operand.visibility == ZYDIS_OPERAND_VISIBILITY_EXPLICIT;
             };
             assert(std::count_if(begin, end, is_visible_operand) == 1);
-            kLogger->debug("The 2nd instruction has 1 visible operands.");
+            // kLogger->debug("The 2nd instruction has 1 visible operands.");
             const ZydisDecodedOperand& operand =
                 *std::find_if(begin, end, is_visible_operand);
             assert(operand.type == ZYDIS_OPERAND_TYPE_IMMEDIATE &&
@@ -234,7 +234,7 @@ void HandleLazySymbolBinding::add_plt(uint64_t src_id) {
                        (3 + src_id) * got_plt.entry_size());
         } else if (i == 2) {
             assert(instr.mnemonic == ZYDIS_MNEMONIC_JMP);
-            kLogger->debug("The 1st instruction of plt entry is jmp.");
+            // kLogger->debug("The 1st instruction of plt entry is jmp.");
 
             auto b = instr.operands;
             auto e = instr.operands + instr.operand_count;
@@ -242,14 +242,14 @@ void HandleLazySymbolBinding::add_plt(uint64_t src_id) {
                 return operand.visibility == ZYDIS_OPERAND_VISIBILITY_EXPLICIT;
             };
             assert(std::count_if(b, e, is_visible_operand) == 1);
-            kLogger->debug("The 2nd instruction has 1 visible operands.");
+            // kLogger->debug("The 2nd instruction has 1 visible operands.");
 
             const ZydisDecodedOperand& operand =
                 *std::find_if(b, e, is_visible_operand);
             assert(operand.type == ZYDIS_OPERAND_TYPE_IMMEDIATE &&
                    operand.imm.is_signed == 1 && operand.imm.is_relative == 1);
-            kLogger->debug("{:x}", plt.entry_size());
-            kLogger->debug("{:d}", 1 + src_id);
+            // kLogger->debug("{:x}", plt.entry_size());
+            // kLogger->debug("{:d}", 1 + src_id);
             assert(operand.imm.value.s == -1 * (2 + src_id) * plt.entry_size());
             uint64_t ra = begin + offset;
             assert(ZYAN_SUCCESS(ZydisCalcAbsoluteAddress(
@@ -257,16 +257,16 @@ void HandleLazySymbolBinding::add_plt(uint64_t src_id) {
                 &operand,
                 plt.virtual_address() + offset - instr.length,
                 &ra)));
-            kLogger->debug("0x{:x}, 0x{:x}, 0x{:x}, 0x{:x}",
-                           plt.virtual_address(),
-                           begin,
-                           offset,
-                           ra);
+            // kLogger->debug("0x{:x}, 0x{:x}, 0x{:x}, 0x{:x}",
+            //                plt.virtual_address(),
+            //                begin,
+            //                offset,
+            //                ra);
         }
         // offset += instr.length;
     }
     assert(offset == end);
-    kLogger->debug("here");
+    // kLogger->debug("here");
 }
 
 }  // namespace shade_so

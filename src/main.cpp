@@ -9,12 +9,12 @@
 
 #include <LIEF/ELF.hpp>
 
-#include "spdlog/spdlog.h"
+// #include "spdlog/spdlog.h"
 #include "src/handle_lazy_symbol_binding.h"
 #include "src/patch_rip_insts.h"
 
 int main() {
-    spdlog::set_level(spdlog::level::debug);
+    // spdlog::set_level(spdlog::level::debug);
     // spdlog::set_pattern("[source %s] [function %!] [line %#] %v");
 
     std::unique_ptr<LIEF::ELF::Binary> src(
@@ -23,6 +23,9 @@ int main() {
         LIEF::ELF::Parser::parse("main.out"));
     std::unique_ptr<LIEF::ELF::Binary> out(
         LIEF::ELF::Parser::parse("main.out"));
+
+    auto sec = out->get_section(".text");
+    sec;
 
     shade_so::HandleLazySymbolBinding(src.get(), dst.get(), out.get())();
     shade_so::PatchRipInsts(dst.get(), out.get())();

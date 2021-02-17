@@ -1,5 +1,5 @@
 // Copyright (c) @ 2021 junbin.rjb.
-// All right reserved.
+// Copyright (c) @ 2021 junbin.rjb.
 //
 // Author: junbin.rjb <837940593@qq.com>
 // Created: 2021/01/31
@@ -15,13 +15,13 @@
 #include <cstddef>
 #include <cstring>
 
-#include "spdlog/spdlog.h"
+// #include "spdlog/spdlog.h"
 
 namespace shade_so {
 namespace {
 
-static auto kLogger = spdlog::rotating_logger_mt(
-    "PatchRipInsts", "logs/shade_so.LOG", 5 * 1024 * 1024, 3);
+// static auto kLogger = spdlog::rotating_logger_mt(
+//     "PatchRipInsts", "logs/shade_so.LOG", 5 * 1024 * 1024, 3);
 
 }  // namespace
 
@@ -56,6 +56,68 @@ void PatchRipInsts::patch(const std::string& sec_name) {
                                                   out_content.data() + offset,
                                                   out_content.size() - offset,
                                                   &inst)));
+
+        if (inst.mnemonic == ZYDIS_MNEMONIC_CALL) {
+            if (inst.operand_count >= 1) {
+                const ZydisDecodedOperand& operand = inst.operands[0];
+                if (operand.visibility == ZYDIS_OPERAND_VISIBILITY_EXPLICIT &&
+                    operand.type == ZYDIS_OPERAND_TYPE_IMMEDIATE) {
+                    uint64_t dst_rip =
+                        dst_sec.virtual_address() + offset + inst.length;
+                    uint64_t dst_jump_to = 0;
+                    assert(ZYAN_SUCCESS(ZydisCalcAbsoluteAddress(
+                        &inst, &operand, dst_rip - inst.length, &dst_jump_to)));
+                    std::cout << "0x" << std::hex << dst_jump_to << std::endl;
+
+                    // TODO(junbin.rjb)
+                    // I assume index of imm is zero.
+                    const auto operand_offset = inst.raw.imm[0].offset;
+                    const auto operand_size = inst.raw.imm[0].size / 8;
+                    // Ignore is_signed.
+                    int32_t imm = 0;
+                    for (auto i = 0; i < operand_size; i++) {
+                        auto t = out_content[offset + operand_offset + i] * 1L;
+                        imm |= t << (8 * i);
+                    }
+                    assert(imm == operand.imm.value.s);
+
+                    assert(dst_->has_section_with_va(dst_jump_to));
+                    const Section& dst_to_sec =
+                        dst_->get_section_with_va(dst_jump_to);
+                    const Section& out_to_sec =
+                        out_->get_section(dst_to_sec.name());
+                    uint64_t out_cur_va = out_sec.virtual_address() + offset;
+                    uint64_t out_rip = out_cur_va + inst.length;
+                    int32_t new_imm =
+                        out_to_sec.virtual_address() +
+                        (dst_jump_to - dst_to_sec.virtual_address()) - out_rip;
+
+                    std::vector<uint8_t> bytes_to_be_patched;
+                    for (std::size_t i = 0; i < operand_size; i++) {
+                        bytes_to_be_patched.emplace_back((new_imm >> (8 * i)) &
+                                                         0xFF);
+                    }
+                    out_->patch_address(out_cur_va + operand_offset,
+                                        bytes_to_be_patched);
+
+                    ZydisDecodedInstruction new_inst;
+                    assert(ZYAN_SUCCESS(ZydisDecoderDecodeBuffer(
+                        &decoder_,
+                        out_->get_section(sec_name).content().data() + offset,
+                        inst.length,
+                        &new_inst)));
+                    uint64_t new_out_jump_to = 0;
+                    assert(ZYAN_SUCCESS(
+                        ZydisCalcAbsoluteAddress(&new_inst,
+                                                 &new_inst.operands[0],
+                                                 out_cur_va,
+                                                 &new_out_jump_to)));
+                    assert(new_out_jump_to - out_to_sec.virtual_address() ==
+                           dst_jump_to - dst_to_sec.virtual_address());
+                    std::cout << "here" << std::endl;
+                }
+            }
+        }
 
         // [begin, end)
         auto begin = &inst.operands[0] - 1;
@@ -95,10 +157,11 @@ void PatchRipInsts::patch(const std::string& sec_name) {
             uint64_t new_disp = out_to_sec.virtual_address() +
                                 (dst_jump_to - dst_to_sec.virtual_address()) -
                                 out_rip;
-            kLogger->info("Rip addend at 0x{:x} changes from 0x{:x} to 0x{:x}.",
-                          out_cur_va,
-                          disp,
-                          new_disp);
+            // kLogger->info("Rip addend at 0x{:x} changes from 0x{:x} to
+            // 0x{:x}.",
+            //               out_cur_va,
+            //               disp,
+            //               new_disp);
             std::vector<uint8_t> bytes_to_be_patched;
             for (std::size_t i = 0; i < operand_size; i++) {
                 bytes_to_be_patched.emplace_back((new_disp >> (8 * i)) & 0xFF);
@@ -127,12 +190,13 @@ void PatchRipInsts::patch(const std::string& sec_name) {
             char new_buf[256];
             ZydisFormatterFormatInstruction(
                 &formatter_, &new_inst, new_buf, sizeof(new_buf), out_cur_va);
-            kLogger->info(
-                "Instruction at 0x{:x} changes from '{:s}' to '{:s}'.",
-                out_cur_va,
-                origin_buf,
-                new_buf);
+            // kLogger->info(
+            //     "Instruction at 0x{:x} changes from '{:s}' to '{:s}'.",
+            //     "Instruction at 0x{:x} changes from '{:s}' to '{:s}'.",
+            //     origin_buf,
+            //     new_buf);
         }
+
         offset += inst.length;
     }
     assert(offset == dst_content.size());
