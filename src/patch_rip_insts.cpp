@@ -46,16 +46,16 @@ void PatchRipInsts::patch(const std::string& sec_name) {
         sec_name,
         [](const ZydisDecodedOperand& operand) {
             if (operand.visibility == ZYDIS_OPERAND_VISIBILITY_EXPLICIT &&
-                (operand.type == ZYDIS_MEMOP_TYPE_MEM ||
-                 operand.type == ZYDIS_MEMOP_TYPE_AGEN ||
-                 operand.type == ZYDIS_MEMOP_TYPE_MIB) &&
+                operand.type == ZYDIS_OPERAND_TYPE_MEMORY &&
                 operand.mem.base == ZYDIS_REGISTER_RIP) {
                 assert(operand.mem.disp.has_displacement);
                 return true;
             }
             return false;
         },
-        [](const ZydisDecodedInstruction& inst, int operand_id) {
+        [](const ZydisDecodedInstruction& inst,
+           const ZydisDecodedOperand& operand,
+           int operand_id) {
             const auto operand_offset = inst.raw.disp.offset;
             const auto operand_size = inst.raw.disp.size / 8;
             assert(operand_id == 0);
@@ -70,7 +70,9 @@ void PatchRipInsts::patch(const std::string& sec_name) {
                    operand.type == ZYDIS_OPERAND_TYPE_IMMEDIATE &&
                    operand.imm.is_relative == ZYAN_TRUE;
         },
-        [](const ZydisDecodedInstruction& inst, int operand_id) {
+        [](const ZydisDecodedInstruction& inst,
+           const ZydisDecodedOperand& operand,
+           int operand_id) {
             assert(operand_id < 2);
             assert(inst.raw.imm[operand_id].size % 8 == 0);
             return BriefValue{.offset = inst.raw.imm[operand_id].offset,
@@ -82,16 +84,17 @@ void PatchRipInsts::patch(const std::string& sec_name) {
 void PatchRipInsts::patch(
     const std::string& sec_name,
     const std::function<bool(const ZydisDecodedOperand&)>& need_to_patch,
-    const std::function<BriefValue(const ZydisDecodedInstruction&, int)>&
-        extract) {
+    const std::function<BriefValue(const ZydisDecodedInstruction&,
+                                   const ZydisDecodedOperand&,
+                                   int)>& extract) {
     const Section& dst_sec = dst_->get_section(sec_name);
     std::vector<uint8_t> dst_content = dst_sec.content();
     const Section& out_sec = out_->get_section(sec_name);
     std::vector<uint8_t> out_content = out_sec.content();
     assert(out_content.size() >= dst_content.size());
-    assert(std::memcmp(dst_content.data(),
-                       out_content.data(),
-                       dst_content.size()) == 0);
+    // assert(std::memcmp(dst_content.data(),
+    //                    out_content.data(),
+    //                    dst_content.size()) == 0);
 
     uint64_t offset = 0;
     while (offset < dst_content.size()) {
@@ -110,13 +113,16 @@ void PatchRipInsts::patch(
             assert(operand_id < 2);
             const ZydisDecodedOperand& operand = *begin;
 
-            BriefValue bv = extract(operand, operand_id);
+            BriefValue bv = extract(inst, operand, operand_id);
             int64_t value = 0;
             for (decltype(bv.size) i = 0; i < bv.size; i++) {
                 auto t = out_content[offset + bv.offset + i] * 1L;
                 value |= t << (8 * i);
             }
             switch (bv.size) {
+            case 1:
+                value = static_cast<int8_t>(value);
+                break;
             case 2:
                 value = static_cast<int16_t>(value);
                 break;
@@ -150,8 +156,7 @@ void PatchRipInsts::patch(
             for (std::size_t i = 0; i < bv.size; i++) {
                 bytes_to_be_patched.emplace_back((new_value >> (8 * i)) & 0xFF);
             }
-            out_->patch_address(out_cur_va + operand_offset,
-                                bytes_to_be_patched);
+            out_->patch_address(out_cur_va + bv.offset, bytes_to_be_patched);
 
             ZydisDecodedInstruction new_inst;
             assert(ZYAN_SUCCESS(ZydisDecoderDecodeBuffer(

@@ -38,11 +38,12 @@ class PatchRipInsts {
 
  private:
     void patch(const std::string& sec_name);
-    void
-    patch(const std::string& sec_name,
-          const std::function<bool(const ZydisDecodedOperand&)>& need_to_patch,
-          const std::function<BriefValue(const ZydisDecodedInstruction&, int)>&
-              extract);
+    void patch(
+        const std::string& sec_name,
+        const std::function<bool(const ZydisDecodedOperand&)>& need_to_patch,
+        const std::function<BriefValue(const ZydisDecodedInstruction&,
+                                       const ZydisDecodedOperand&,
+                                       int)>& extract);
 
  private:
     Binary* dst_;
