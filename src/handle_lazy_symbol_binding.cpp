@@ -87,11 +87,174 @@ void HandleLazySymbolBinding::extend(uint64_t entries_num) {
     ExtendSection(out_, ".dynstr", src_->get_section(".dynstr").size())();
 }
 
-void HandleLazySymbolBinding::add_plt(uint64_t src_id) {
-    LIEF::ELF::Section& plt = src_->get_section(section_names::kPlt);
-    std::vector<uint8_t> content = plt.content();
-    uint8_t* data = content.data();
-    auto size = plt.entry_size();
+void HandleLazySymbolBinding::fill(uint64_t entries_num) {
+    const Section& src_plt = src_->get_section(section_names::kPlt);
+    std::vector<uint8_t> src_plt_content = src_plt.content();
+    const Section& dst_plt = dst_->get_section(section_names::kPlt);
+    const Section& out_plt = out_->get_section(section_names::kPlt);
+    auto plt_entry_size = src_plt.entry_size();
+    assert(plt_entry_size == dts_plt.entry_size());
+    assert(plt_entry_size == out_plt.entry_size());
+    // The first entry of .plt section is a stub.
+    assert(out_plt.size() ==
+           dst_plt.size() + (src_plt.size() - 1 * plt_entry_size));
+    out_->patch_address(
+        out_plt.virtual_address() + dst_plt.size(),
+        std::vector<uint8_t>(src_plt_content.data() + 1 * plt_entry_size,
+                             src_plt_content.data() + src_plt.size()));
+    std::vector<uint8_t> out_plt_content = out_plt.content();
+
+    assert(src_plt.size() == entries_num * plt_entry_size);
+    for (int entry = 0; entry < entries_num; entry++) {
+        uint64_t begin = dst_plt.size() + (entry + 1) * plt_entry_size;
+        uint64_t end = begin + plt_entry_size;
+        uint64_t offset = 0;
+        for (int inst_id = 0; inst_id < 3; inst_id++) {
+            ZydisDecodedInstruction inst;
+            assert(ZYAN_SUCCESS(
+                ZydisDecoderDecodeBuffer(&decoder_,
+                                         out_plt_content.data() + offset,
+                                         end - offset,
+                                         &inst)));
+            switch (inst_id) {
+            case 0:
+                handle_plt_entry_inst<0>(entry, offset, inst);
+                break;
+            case 1:
+                handle_plt_entry_inst<1>(entry, offset, inst);
+                break;
+            case 2:
+                break;
+            default:
+                assert(false);
+            }
+        }
+    }
+    assert(offset == end);
+}
+
+template <int N>
+void HandleLazySymbolBinding::handle_plt_entry_inst(
+    int entry_id, uint64_t offset, const ZydisDecodedInstruction& inst) {
+    assert(false);
+}
+
+template <>
+void HandleLazySymbolBinding::handle_plt_entry_inst<0>(
+    int entry_id, uint64_t offset, const ZydisDecodedInstruction& inst) {
+    assert(inst.mnemonic == ZYDIS_MNEMONIC_JMP);
+    auto begin = inst.operands;
+    auto end = inst.operands + inst.operand_count;
+    auto visible = [](const ZydisDecodedOperand& operand) {
+        return operand.visibility == ZYDIS_OPERAND_VISIBILITY_EXPLICIT;
+    };
+    assert(std::count_if(begin, end, visible) == 1);
+    const ZydisDecodedOperand& operand = *std::find_if(begin, end, visible);
+    assert(operand.type == ZYDIS_OPERAND_TYPE_MEMORY &&
+           operand.mem.base == ZYDIS_REGISTER_RIP &&
+           operand.mem.disp.has_displacement);
+
+    const Section& out_plt_sec = out_->get_section(section_names::kPlt);
+    const Section& out_got_plt_sec = out_->get_section(section_names::kGotPlt);
+    uint64_t cur_va = out_plt_sec.virtual_address() + offset;
+    uint64_t rip = cur_va + inst.length;
+    // https://clcanny.github.io/2021/01/30/dynamic-linking-the-first-three-items-of-got/
+    uint64_t addend = out_plt_got_sec.virtual_address() +
+                      (entry_id + 3) * out_plt_got_sec.entry_size() - rip;
+    std::vector<uint8_t> bytes_to_be_patched;
+    for (auto i = 0; i < inst.raw.disp.size; i++) {
+        bytes_to_be_patched.emplace_back((addend >> (8 * i)) & 0xFF);
+    }
+    out_->patch_address(cur_va + inst.raw.disp.offset, bytes_to_be_patched);
+
+    bytes_to_be_patched.clear();
+    auto plt_got_es = out_plt_got_sec.entry_size();
+    for (auto i = 0; i < plt_got_es; i++) {
+        bytes_to_be_patched.emplace_back((cur_va >> (8 * i)) & 0xFF);
+    }
+    out_->patch_address(out_plt_got_sec.virtual_address() +
+                            (entry_id + 3) * plt_got_es,
+                        bytes_to_be_patched);
+}
+
+template <>
+void HandleLazySymbolBinding::handle_plt_entry_inst<1>(
+    int entry_id, uint64_t offset, const ZydisDecodedInstruction& inst) {
+    assert(inst.mnemonic == ZYDIS_MNEMONIC_PUSH);
+    auto begin = inst.operands;
+    auto end = inst.operands + inst.operand_count;
+    auto visible = [](const ZydisDecodedOperand& operand) {
+        return operand.visibility == ZYDIS_OPERAND_VISIBILITY_EXPLICIT;
+    };
+    assert(std::count_if(begin, end, visible) == 1);
+    const ZydisDecodedOperand& operand = *std::find_if(begin, end, visible);
+    assert(operand.type == ZYDIS_OPERAND_TYPE_IMMEDIATE &&
+           operand.imm.is_signed == ZYAN_TRUE &&
+           operand.imm.is_relative == ZYAN_FALSE);
+
+    const Section& out_plt_sec = out->get_section(section_names::kPlt);
+    const Section& out_got_plt_sec = out->get_section(section_names::kGotPlt);
+    const Section& out_rela_plt_sec =
+        out_->get_section(section_names::kRelaPlt);
+    Relocation reloc = src_->pltgot_relocations().at(entry_id);
+    reloc.address(out_got_plt_sec.virtual_address() +
+                  (3 + entry_id) * out_got_plt_sec.entry_size());
+    out_->add_pltgot_relocation(reloc);
+
+    auto out_rela_id = out_->pltgot_relocations().size() - 1;
+    std::vector<uint8_t> bytes_to_be_patched;
+    for (auto i = 0; i < inst.raw.imm[0].size; i++) {
+        bytes_to_be_patched.emplace_back((out_rela_id >> (8 * i)) & 0xFF);
+    }
+    out_->patch_address(out_plt_sec.virtual_address() + offset +
+                            inst.raw.imm[0].offset,
+                        bytes_to_be_patched);
+}
+
+template <>
+void HandleLazySymbolBinding::handle_plt_entry_inst<2>(
+    int entry_id, uint64_t offset, const ZydisDecodedInstruction& inst) {
+    assert(instr.mnemonic == ZYDIS_MNEMONIC_JMP);
+    // kLogger->debug("The 1st instruction of plt entry is jmp.");
+
+    auto b = instr.operands;
+    auto e = instr.operands + instr.operand_count;
+    auto is_visible_operand = [](const ZydisDecodedOperand& operand) {
+        return operand.visibility == ZYDIS_OPERAND_VISIBILITY_EXPLICIT;
+    };
+    assert(std::count_if(b, e, is_visible_operand) == 1);
+    // kLogger->debug("The 2nd instruction has 1 visible
+    // operands.");
+
+    const ZydisDecodedOperand& operand =
+        *std::find_if(b, e, is_visible_operand);
+    assert(operand.type == ZYDIS_OPERAND_TYPE_IMMEDIATE &&
+           operand.imm.is_signed == 1 && operand.imm.is_relative == 1);
+    // kLogger->debug("{:x}", plt.entry_size());
+    // kLogger->debug("{:d}", 1 + src_id);
+    assert(operand.imm.value.s == -1 * (2 + src_id) * plt.entry_size());
+    uint64_t ra = begin + offset;
+    assert(ZYAN_SUCCESS(ZydisCalcAbsoluteAddress(
+        &instr, &operand, plt.virtual_address() + offset - instr.length, &ra)));
+    // kLogger->debug("0x{:x}, 0x{:x}, 0x{:x}, 0x{:x}",
+    //                plt.virtual_address(),
+    //                begin,
+    //                offset,
+    //                ra);
+}
+
+void HandleLazySymbolBinding::handle_plt() {
+    const Section& src_plt = src_->get_section(section_names::kPlt);
+    std::vector<uint8_t> src_content = src_plt.content();
+    uint8_t* src_data = src_content.data();
+    auto size = src_plt.entry_size();
+
+    const Section& dst_plt = dst_->get_section(section_names::kPlt);
+    const Section& out_plt = out_->get_section(section_names::kPlt);
+    assert(out_plt.size() == src_plt.size() + dst_plt.size());
+    out_->patch_address(
+        out_plt.virtual_address() + dst_plt.size(),
+        std::vector<uint8_t>(src_data + size, src_data + src_plt.size()));
 
     // The first entry of .plt section is a stub.
     LIEF::ELF::Section& got_plt = src_->get_section(section_names::kGotPlt);
