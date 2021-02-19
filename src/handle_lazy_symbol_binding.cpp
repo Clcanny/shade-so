@@ -107,12 +107,13 @@ void HandleLazySymbolBinding::handle_plt_entry_inst<0>(
            operand.mem.disp.has_displacement);
 
     const Section& out_plt_sec = out_->get_section(section_names::kPlt);
+    const Section& dst_got_plt_sec = dst_->get_section(section_names::kGotPlt);
     const Section& out_got_plt_sec = out_->get_section(section_names::kGotPlt);
     uint64_t cur_va = out_plt_sec.virtual_address() + offset;
     uint64_t rip = cur_va + inst.length;
-    // https://clcanny.github.io/2021/01/30/dynamic-linking-the-first-three-items-of-got/
     uint64_t addend = out_got_plt_sec.virtual_address() +
-                      (entry_id + 3) * out_got_plt_sec.entry_size() - rip;
+                      dst_got_plt_sec.size() +
+                      entry_id * out_got_plt_sec.entry_size() - rip;
     std::vector<uint8_t> bytes_to_be_patched;
     for (auto i = 0; i < inst.raw.disp.size / 8; i++) {
         bytes_to_be_patched.emplace_back((addend >> (8 * i)) & 0xFF);
