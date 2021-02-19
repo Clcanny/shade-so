@@ -20,6 +20,7 @@ class HandleLazySymbolBinding {
     using Binary = LIEF::ELF::Binary;
     using Section = LIEF::ELF::Section;
     using Symbol = LIEF::ELF::Symbol;
+    using Relocation = LIEF::ELF::Relocation;
 
  public:
     HandleLazySymbolBinding(Binary* src, Binary* dst, Binary* out);
@@ -28,11 +29,14 @@ class HandleLazySymbolBinding {
  private:
     uint64_t check() const;
     void extend(uint64_t src_id);
-    void add_plt(uint64_t src_id);
-    void add_got_plt(uint64_t src_id);
-    void add_rela_plt(uint64_t src_id);
-    void add_undef_dynsym(uint64_t src_id);
-    void add_dynstr(uint64_t src_id);
+
+    void fill(uint64_t entries_num);
+    template <int N>
+    void handle_plt_entry_inst(int entry_id,
+                               uint64_t offset,
+                               const ZydisDecodedInstruction& inst);
+    ZydisDecodedOperand get_exactly_one_visible_operand(
+        const ZydisDecodedInstruction& inst);
 
  private:
     Binary* src_;
