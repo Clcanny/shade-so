@@ -128,7 +128,7 @@ void HandleLazySymbolBinding::handle_plt_entry_inst<0>(
         bytes_to_be_patched.emplace_back((cur_va >> (8 * i)) & 0xFF);
     }
     out_->patch_address(out_got_plt_sec.virtual_address() +
-                            (entry_id + 3) * got_plt_es,
+                            dst_got_plt_sec.size() + entry_id * got_plt_es,
                         bytes_to_be_patched);
 }
 
