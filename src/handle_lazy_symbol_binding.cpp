@@ -66,16 +66,20 @@ uint64_t HandleLazySymbolBinding::operator()() {
     // assert(undef_dynsym_entries_num == plt_entries_num);
 
     extend(plt_entries_num);
+
+    const Section& plt_got = out_->get_section(".plt.got");
     fill(plt_entries_num);
     return plt_entries_num;
 }
 
 void HandleLazySymbolBinding::extend(uint64_t entries_num) {
+    namespace names = section_names;
+
     const Section& plt = out_->get_section(".plt");
     ExtendSection(out_, ".plt", plt.entry_size() * entries_num)();
 
-    const Section& got_plt = out_->get_section(".plt.got");
-    ExtendSection(out_, ".plt.got", got_plt.entry_size() * entries_num)();
+    const Section& got_plt = out_->get_section(names::kGotPlt);
+    ExtendSection(out_, names::kGotPlt, got_plt.entry_size() * entries_num)();
 
     const Section& rela_plt = out_->get_section(".rela.plt");
     ExtendSection(out_, ".rela.plt", rela_plt.entry_size() * entries_num)();
@@ -110,9 +114,11 @@ void HandleLazySymbolBinding::handle_plt_entry_inst<0>(
     uint64_t addend = out_got_plt_sec.virtual_address() +
                       (entry_id + 3) * out_got_plt_sec.entry_size() - rip;
     std::vector<uint8_t> bytes_to_be_patched;
-    for (auto i = 0; i < inst.raw.disp.size; i++) {
+    for (auto i = 0; i < inst.raw.disp.size / 8; i++) {
         bytes_to_be_patched.emplace_back((addend >> (8 * i)) & 0xFF);
     }
+    assert(cur_va + inst.raw.disp.offset + bytes_to_be_patched.size() <
+           out_plt_sec.virtual_address() + out_plt_sec.size());
     out_->patch_address(cur_va + inst.raw.disp.offset, bytes_to_be_patched);
 
     bytes_to_be_patched.clear();
@@ -146,7 +152,7 @@ void HandleLazySymbolBinding::handle_plt_entry_inst<1>(
 
     auto out_rela_id = out_->pltgot_relocations().size() - 1;
     std::vector<uint8_t> bytes_to_be_patched;
-    for (auto i = 0; i < inst.raw.imm[0].size; i++) {
+    for (auto i = 0; i < inst.raw.imm[0].size / 8; i++) {
         bytes_to_be_patched.emplace_back((out_rela_id >> (8 * i)) & 0xFF);
     }
     out_->patch_address(out_plt_sec.virtual_address() + offset +
@@ -164,9 +170,10 @@ void HandleLazySymbolBinding::handle_plt_entry_inst<2>(
 
     uint64_t out_plt_va =
         out_->get_section(section_names::kPlt).virtual_address();
+    uint64_t value = out_plt_va - (out_plt_va + offset + inst.length);
     std::vector<uint8_t> bytes_to_be_patched;
-    for (auto i = 0; i < inst.raw.imm[0].size; i++) {
-        bytes_to_be_patched.emplace_back((out_plt_va >> (8 * i)) & 0xFF);
+    for (auto i = 0; i < inst.raw.imm[0].size / 8; i++) {
+        bytes_to_be_patched.emplace_back((value >> (8 * i)) & 0xFF);
     }
     out_->patch_address(out_plt_va + offset + inst.raw.imm[0].offset,
                         bytes_to_be_patched);
@@ -185,13 +192,15 @@ void HandleLazySymbolBinding::fill(uint64_t entries_num) {
            dst_plt.size() + (src_plt.size() - 1 * plt_entry_size));
     out_->patch_address(
         out_plt.virtual_address() + dst_plt.size(),
-        std::vector<uint8_t>(src_plt_content.data() + 1 * plt_entry_size,
-                             src_plt_content.data() + src_plt.size()));
+        std::vector<uint8_t>(src_plt_content.begin() + 1 * plt_entry_size,
+                             src_plt_content.end()));
     std::vector<uint8_t> out_plt_content = out_plt.content();
+    assert(out_plt_content.size() ==
+           dst_plt.size() + (src_plt.size() - 1 * plt_entry_size));
 
     assert(src_plt.size() == (1 + entries_num) * plt_entry_size);
     for (int entry = 0; entry < entries_num; entry++) {
-        uint64_t begin = dst_plt.size() + (entry + 1) * plt_entry_size;
+        uint64_t begin = dst_plt.size() + entry * plt_entry_size;
         uint64_t end = begin + plt_entry_size;
         uint64_t offset = begin;
         for (int inst_id = 0; inst_id < 3; inst_id++) {
