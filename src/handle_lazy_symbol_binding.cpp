@@ -118,7 +118,7 @@ void HandleLazySymbolBinding::handle_plt_entry_inst<0>(
     for (auto i = 0; i < inst.raw.disp.size / 8; i++) {
         bytes_to_be_patched.emplace_back((addend >> (8 * i)) & 0xFF);
     }
-    assert(cur_va + inst.raw.disp.offset + bytes_to_be_patched.size() <
+    assert(cur_va + inst.raw.disp.offset + bytes_to_be_patched.size() <=
            out_plt_sec.virtual_address() + out_plt_sec.size());
     out_->patch_address(cur_va + inst.raw.disp.offset, bytes_to_be_patched);
 
@@ -127,6 +127,9 @@ void HandleLazySymbolBinding::handle_plt_entry_inst<0>(
     for (auto i = 0; i < got_plt_es; i++) {
         bytes_to_be_patched.emplace_back((cur_va >> (8 * i)) & 0xFF);
     }
+    assert(out_got_plt_sec.virtual_address() + dst_got_plt_sec.size() +
+               entry_id * got_plt_es + bytes_to_be_patched.size() <=
+           out_got_plt_sec.virtual_address() + out_got_plt_sec.size());
     out_->patch_address(out_got_plt_sec.virtual_address() +
                             dst_got_plt_sec.size() + entry_id * got_plt_es,
                         bytes_to_be_patched);
@@ -148,7 +151,8 @@ void HandleLazySymbolBinding::handle_plt_entry_inst<1>(
     assert(entry_id < src_->pltgot_relocations().size());
     Relocation reloc = src_->pltgot_relocations()[entry_id];
     reloc.address(out_got_plt_sec.virtual_address() +
-                  (3 + entry_id) * out_got_plt_sec.entry_size());
+                  (dst_->pltgot_relocations().size() + 3 + entry_id) *
+                      out_got_plt_sec.entry_size());
     out_->add_pltgot_relocation(reloc);
 
     auto out_rela_id = out_->pltgot_relocations().size() - 1;
@@ -156,6 +160,9 @@ void HandleLazySymbolBinding::handle_plt_entry_inst<1>(
     for (auto i = 0; i < inst.raw.imm[0].size / 8; i++) {
         bytes_to_be_patched.emplace_back((out_rela_id >> (8 * i)) & 0xFF);
     }
+    assert(out_plt_sec.virtual_address() + offset + inst.raw.imm[0].offset +
+               bytes_to_be_patched.size() <=
+           out_plt_sec.virtual_address() + out_plt_sec.size());
     out_->patch_address(out_plt_sec.virtual_address() + offset +
                             inst.raw.imm[0].offset,
                         bytes_to_be_patched);
@@ -176,6 +183,9 @@ void HandleLazySymbolBinding::handle_plt_entry_inst<2>(
     for (auto i = 0; i < inst.raw.imm[0].size / 8; i++) {
         bytes_to_be_patched.emplace_back((value >> (8 * i)) & 0xFF);
     }
+    assert(out_plt_va + offset + inst.raw.imm[0].offset +
+               bytes_to_be_patched.size() <=
+           out_plt_va + out_->get_section(section_names::kPlt).size());
     out_->patch_address(out_plt_va + offset + inst.raw.imm[0].offset,
                         bytes_to_be_patched);
 }
@@ -221,8 +231,8 @@ void HandleLazySymbolBinding::fill(uint64_t entries_num) {
             case 2:
                 handle_plt_entry_inst<2>(entry, offset, inst);
                 break;
-            default:
-                assert(false);
+                // default:
+                //     assert(false);
             }
             offset += inst.length;
         }
