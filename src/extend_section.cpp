@@ -32,9 +32,8 @@ void ExtendSection::ceil_size() {
     uint64_t align = section_.alignment();
     uint64_t va = section_.virtual_address();
     uint64_t sz = section_.size();
-    assert(va % align == 0);
-    assert(sz % align == 0);
-    // Ensure section align after extending.
+    // assert(va % align == 0);
+    // assert(sz % align == 0);
     if (size_ % align != 0) {
         size_ = (size_ / align + 1) * align;
     }
