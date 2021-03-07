@@ -149,11 +149,17 @@ void HandleLazySymbolBinding::handle_plt_entry_inst<1>(
     const Section& out_rela_plt_sec =
         out_->get_section(section_names::kRelaPlt);
     assert(entry_id < src_->pltgot_relocations().size());
-    Relocation reloc = src_->pltgot_relocations()[entry_id];
-    reloc.address(out_got_plt_sec.virtual_address() +
-                  (dst_->pltgot_relocations().size() + 3 + entry_id) *
-                      out_got_plt_sec.entry_size());
-    out_->add_pltgot_relocation(reloc);
+    const Relocation& src_reloc = src_->pltgot_relocations()[entry_id];
+    Relocation out_reloc = src_reloc;
+    if (src_reloc.has_symbol()) {
+        const Symbol& src_sym = src_reloc.symbol();
+        Symbol& out_sym = out_->add_dynamic_symbol(src_sym);
+        out_reloc.symbol(&out_sym);
+    }
+    out_reloc.address(out_got_plt_sec.virtual_address() +
+                      (dst_->pltgot_relocations().size() + 3 + entry_id) *
+                          out_got_plt_sec.entry_size());
+    out_->add_pltgot_relocation(out_reloc);
 
     auto out_rela_id = out_->pltgot_relocations().size() - 1;
     std::vector<uint8_t> bytes_to_be_patched;
