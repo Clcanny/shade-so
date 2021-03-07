@@ -153,6 +153,11 @@ void HandleLazySymbolBinding::handle_plt_entry_inst<1>(
     Relocation out_reloc = src_reloc;
     if (src_reloc.has_symbol()) {
         const Symbol& src_sym = src_reloc.symbol();
+        // Symbol& out_sym = out_->add_dynamic_symbol(
+        //     src_sym,
+        //     src_sym.has_version() ? const_cast<LIEF::ELF::SymbolVersion*>(
+        //                                 &src_sym.symbol_version())
+        //                           : nullptr);
         Symbol& out_sym = out_->add_dynamic_symbol(src_sym);
         out_reloc.symbol(&out_sym);
     }
