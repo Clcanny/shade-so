@@ -6,6 +6,7 @@ add_executable (merge.out
     merge_section.cpp
     patch_rip_insts.cpp
     validate_format.cpp
+    merge_text_section.cpp
 )
 target_include_directories (merge.out PRIVATE
     ${PROJECT_SOURCE_DIR}

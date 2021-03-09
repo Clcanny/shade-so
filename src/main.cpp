@@ -12,7 +12,7 @@
 
 // #include "spdlog/spdlog.h"
 #include "src/handle_lazy_symbol_binding.h"
-#include "src/merge_section.h"
+#include "src/merge_text_section.h"
 #include "src/patch_rip_insts.h"
 
 int main() {
@@ -27,9 +27,7 @@ int main() {
         LIEF::ELF::Parser::parse("main.out"));
 
     shade_so::HandleLazySymbolBinding(src.get(), dst.get(), out.get())();
-    uint8_t nop_code = 0x90;
-    uint64_t va =
-        shade_so::MergeSection(src.get(), out.get(), ".text", nop_code)();
+    shade_so::MergeTextSection(src.get(), dst.get(), out.get())();
     shade_so::PatchRipInsts(dst.get(), out.get())();
 
     out->write("modified-main.out");
