@@ -8,23 +8,32 @@
 #include "src/relocate_jump_slot_entry.h"
 
 #include <cstdint>
+#include <string>
+#include <vector>
 
 namespace shade_so {
 
-RelocateJumpSlotEntry::RelocateJumpSlotEntry(LIEF::ELF::Binary* src,
-                                             LIEF::ELF::Binary* dst,
-                                             LIEF::ELF::Binary* out)
-    : src_(src), dst_(dst), out_(out) {
+RelocateJumpSlotEntry::RelocateJumpSlotEntry(LIEF::ELF::Binary* out)
+    : out_(out) {
 }
 
 void RelocateJumpSlotEntry::operator()() {
     for (auto i = 0; i < out_->pltgot_relocations().size(); i++) {
-        const LIEF::ELF::Relocation& out_reloc = out_->pltgot_relocations()[i];
-        if (!out_reloc.has_symbol()) {
+        const LIEF::ELF::Relocation& reloc = out_->pltgot_relocations()[i];
+        if (!reloc.has_symbol()) {
             continue;
         }
-        const LIEF::ELF::Symbol& src_sym =
-            src_->get_dynamic_symbol(reloc.symbol().name());
+        const std::string& name = reloc.symbol().name();
+        if (!out_->has_static_symbol(name)) {
+            continue;
+        }
+        const LIEF::ELF::Symbol& sym = out_->get_static_symbol(name);
+        std::vector<uint8_t> bytes_to_be_patched;
+        for (auto i = 0; i < 8; i++) {
+            bytes_to_be_patched.emplace_back((sym.value() >> (8 * i)) & 0xFF);
+        }
+        std::cout << std::hex << reloc.address() << std::endl;
+        out_->patch_address(reloc.address(), bytes_to_be_patched);
     }
 }
 

@@ -14,14 +14,10 @@ namespace shade_so {
 
 class RelocateJumpSlotEntry {
  public:
-    RelocateJumpSlotEntry(LIEF::ELF::Binary* src,
-                          LIEF::ELF::Binary* dst,
-                          LIEF::ELF::Binary* out);
+    explicit RelocateJumpSlotEntry(LIEF::ELF::Binary* out);
     void operator()();
 
  private:
-    LIEF::ELF::Binary* src_;
-    LIEF::ELF::Binary* dst_;
     LIEF::ELF::Binary* out_;
 };
 
