@@ -24,8 +24,8 @@ MergeTextSection::MergeTextSection(LIEF::ELF::Binary* src,
 
 void MergeTextSection::operator()() {
     // I use a very loose value.
-    ExtendSection(out_, ".strtab", src_->get_section(".strtab").size());
-    ExtendSection(out_, ".symtab", src_->get_section(".symtab").size());
+    ExtendSection(out_, ".strtab", src_->get_section(".strtab").size() + 0x5f)();
+    ExtendSection(out_, ".symtab", src_->get_section(".symtab").size())();
 
     uint8_t nop_code = 0x90;
     MergeSection(src_, out_, ".text", nop_code)();
@@ -55,12 +55,6 @@ void MergeTextSection::operator()() {
             continue;
         }
         addedSyms.insert(name);
-        if (name != "_Z41__static_initialization_and_destruction_0ii") {
-            // if (name != "_Z3foov" && name !=
-            // "_Z41__static_initialization_and_destruction_0ii") { if (name !=
-            // "_Z3foov") {
-            continue;
-        }
         LIEF::ELF::Symbol out_sym(
             name,
             LIEF::ELF::ELF_SYMBOL_TYPES::STT_FUNC,

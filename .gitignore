@@ -2,3 +2,5 @@
 *.so
 *.out
 build/**
+debug/**
+release/**
