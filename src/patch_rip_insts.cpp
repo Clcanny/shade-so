@@ -26,7 +26,9 @@ namespace {
 
 }  // namespace
 
-PatchRipInsts::PatchRipInsts(Binary* dst, Binary* out) : dst_(dst), out_(out) {
+PatchRipInsts::PatchRipInsts(Binary* src, Binary* dst, Binary* out)
+    : src_(src), dst_(dst), out_(out) {
+    assert(src_ != nullptr);
     assert(dst_ != nullptr);
     assert(out_ != nullptr);
     ZydisDecoderInit(
@@ -87,17 +89,18 @@ void PatchRipInsts::patch(
     const std::function<BriefValue(const ZydisDecodedInstruction&,
                                    const ZydisDecodedOperand&,
                                    int)>& extract) {
+    const Section& src_sec = src_->get_section(sec_name);
     const Section& dst_sec = dst_->get_section(sec_name);
-    std::vector<uint8_t> dst_content = dst_sec.content();
     const Section& out_sec = out_->get_section(sec_name);
     std::vector<uint8_t> out_content = out_sec.content();
-    assert(out_content.size() >= dst_content.size());
+    assert(out_content.size() >= dst_sec.size());
+    // std::vector<uint8_t> dst_content = dst_sec.content();
     // assert(std::memcmp(dst_content.data(),
     //                    out_content.data(),
     //                    dst_content.size()) == 0);
 
     uint64_t offset = 0;
-    while (offset < dst_content.size()) {
+    while (offset < out_content.size()) {
         ZydisDecodedInstruction inst;
         assert(
             ZYAN_SUCCESS(ZydisDecoderDecodeBuffer(&decoder_,
@@ -136,20 +139,31 @@ void PatchRipInsts::patch(
             }
             assert(value == bv.value);
 
-            uint64_t dst_cur_va = dst_sec.virtual_address() + offset;
-            uint64_t dst_rip = dst_cur_va + inst.length;
-            uint64_t dst_jump_to = 0;
-            assert(ZYAN_SUCCESS(ZydisCalcAbsoluteAddress(
-                &inst, &operand, dst_cur_va, &dst_jump_to)));
-            assert(dst_jump_to == dst_rip + value);
+            bool from_dst = offset < dst_sec.size();
+            const LIEF::ELF::Section& in_sec = from_dst ? dst_sec : src_sec;
+            LIEF::ELF::Binary* in_bin = from_dst ? dst_ : src_;
 
-            assert(dst_->has_section_with_va(dst_jump_to));
-            const Section& dst_to_sec = dst_->get_section_with_va(dst_jump_to);
-            const Section& out_to_sec = out_->get_section(dst_to_sec.name());
+            uint64_t in_cur_va = in_sec.virtual_address() + offset -
+                                 (from_dst ? 0 : dst_sec.size());
+            uint64_t in_rip = in_cur_va + inst.length;
+            uint64_t in_jump_to = 0;
+            assert(ZYAN_SUCCESS(ZydisCalcAbsoluteAddress(
+                &inst, &operand, in_cur_va, &in_jump_to)));
+            assert(in_jump_to == in_rip + value);
+
+            // __TMC_END__
+            if (!in_bin->has_section_with_va(in_jump_to)) {
+                continue;
+            }
+            assert(in_bin->has_section_with_va(in_jump_to));
+            const Section& in_to_sec = in_bin->get_section_with_va(in_jump_to);
+            const Section& dst_to_sec = dst_->get_section(in_to_sec.name());
+            const Section& out_to_sec = out_->get_section(in_to_sec.name());
             uint64_t out_cur_va = out_sec.virtual_address() + offset;
             uint64_t out_rip = out_cur_va + inst.length;
             int64_t new_value = out_to_sec.virtual_address() +
-                                (dst_jump_to - dst_to_sec.virtual_address()) -
+                                (from_dst ? 0 : dst_to_sec.size()) +
+                                (in_jump_to - in_to_sec.virtual_address()) -
                                 out_rip;
 
             std::vector<uint8_t> bytes_to_be_patched;
@@ -170,8 +184,9 @@ void PatchRipInsts::patch(
                 &new_inst.operands[0] + (begin - &inst.operands[0]),
                 out_cur_va,
                 &new_out_jump_to)));
-            assert(new_out_jump_to - out_to_sec.virtual_address() ==
-                   dst_jump_to - dst_to_sec.virtual_address());
+            assert(new_out_jump_to - out_to_sec.virtual_address() -
+                       (from_dst ? 0 : dst_to_sec.size()) ==
+                   in_jump_to - in_to_sec.virtual_address());
             // kLogger->info(
             //     "Instruction at 0x{:x} changes from '{:s}' to '{:s}'.",
             //     "Instruction at 0x{:x} changes from '{:s}' to '{:s}'.",
@@ -180,7 +195,7 @@ void PatchRipInsts::patch(
         }
         offset += inst.length;
     }
-    assert(offset == dst_content.size());
+    assert(offset == out_content.size());
 }
 
 }  // namespace shade_so

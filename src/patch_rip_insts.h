@@ -33,7 +33,7 @@ class PatchRipInsts {
     };
 
  public:
-    PatchRipInsts(Binary* dst, Binary* out);
+    PatchRipInsts(Binary* src, Binary* dst, Binary* out);
     void operator()();
 
  private:
@@ -46,6 +46,7 @@ class PatchRipInsts {
                                        int)>& extract);
 
  private:
+    Binary* src_;
     Binary* dst_;
     Binary* out_;
     ZydisDecoder decoder_;
