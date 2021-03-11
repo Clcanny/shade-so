@@ -1,4 +1,4 @@
 #include <iostream>
 void bar() {
-    std::cout << std::endl;
+    std::cout << "bar" << std::endl;
 }
