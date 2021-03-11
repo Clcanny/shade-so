@@ -21,6 +21,7 @@ class MergeSection {
 
  public:
     MergeSection(Binary* src,
+                 Binary* dst,
                  Binary* out,
                  const std::string& section_name,
                  uint8_t empty_value);
@@ -28,9 +29,10 @@ class MergeSection {
 
  private:
     Binary* src_;
+    Binary* dst_;
     Binary* out_;
     std::string section_name_;
-    uint64_t empty_value_;
+    uint8_t empty_value_;
 };
 
 }  // namespace shade_so

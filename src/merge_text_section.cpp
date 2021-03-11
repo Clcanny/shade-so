@@ -24,11 +24,9 @@ MergeTextSection::MergeTextSection(LIEF::ELF::Binary* src,
 
 void MergeTextSection::operator()() {
     // I use a very loose value.
-    ExtendSection(out_, ".strtab", src_->get_section(".strtab").size())();
-    ExtendSection(out_, ".symtab", src_->get_section(".symtab").size())();
 
     uint8_t nop_code = 0x90;
-    MergeSection(src_, out_, ".text", nop_code)();
+    MergeSection(src_, dst_, out_, ".text", nop_code)();
     const LIEF::ELF::Section& src_text_sec = src_->text_section();
     const LIEF::ELF::Section& dst_text_sec = dst_->text_section();
     const LIEF::ELF::Section& out_text_sec = out_->text_section();

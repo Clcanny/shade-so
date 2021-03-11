@@ -23,13 +23,8 @@ HandleStrictSymbolBinding::HandleStrictSymbolBinding(LIEF::ELF::Binary* src,
 }
 
 void HandleStrictSymbolBinding::operator()() {
-    ExtendSection(out_, ".plt.got", src_->get_section(".plt.got").size())();
-    MergeSection(src_, out_, ".plt.got", 0x90)();
-    ExtendSection(out_, ".got", src_->get_section(".got").size())();
-    MergeSection(src_, out_, ".got", 0x0)();
-    ExtendSection(out_, ".dynsym", src_->get_section(".dynsym").size())();
-    ExtendSection(out_, ".symtab", src_->get_section(".symtab").size())();
-    ExtendSection(out_, ".rela.dyn", src_->get_section(".rela.dyn").size())();
+    MergeSection(src_, dst_, out_, ".plt.got", 0x90)();
+    MergeSection(src_, dst_, out_, ".got", 0x0)();
 
     for (auto i = 0; i < src_->relocations().size(); i++) {
         const LIEF::ELF::Relocation& src_reloc = src_->relocations()[i];

@@ -11,6 +11,7 @@
 #include <LIEF/ELF.hpp>
 
 // #include "spdlog/spdlog.h"
+#include "src/extend_section.h"
 #include "src/handle_lazy_symbol_binding.h"
 #include "src/handle_strict_symbol_binding.h"
 #include "src/merge_text_section.h"
@@ -28,6 +29,26 @@ int main() {
     std::unique_ptr<LIEF::ELF::Binary> out(
         LIEF::ELF::Parser::parse("main.out"));
 
+    using shade_so::ExtendSection;
+    ExtendSection(out.get(), ".plt.got", src->get_section(".plt.got").size())();
+    ExtendSection(out.get(), ".got", src->get_section(".got").size())();
+    ExtendSection(out.get(), ".dynsym", src->get_section(".dynsym").size())();
+    ExtendSection(out.get(), ".symtab", src->get_section(".symtab").size())();
+    ExtendSection(
+        out.get(), ".rela.dyn", src->get_section(".rela.dyn").size())();
+    ExtendSection(out.get(), ".strtab", src->get_section(".strtab").size())();
+    ExtendSection(out.get(), ".symtab", src->get_section(".symtab").size())();
+    ExtendSection(out.get(), ".text", src->get_section(".text").size())();
+
+    ExtendSection(out.get(), ".plt", src->get_section(".plt").size())();
+    ExtendSection(out.get(), ".got.plt", src->get_section(".got.plt").size())();
+    ExtendSection(
+        out.get(), ".rela.plt", src->get_section(".rela.plt").size())();
+    ExtendSection(out.get(), ".dynsym", src->get_section(".dynsym").size())();
+    ExtendSection(out.get(), ".dynstr", src->get_section(".dynstr").size())();
+    // out->write("modified-main.out");
+
+    // out = LIEF::ELF::Parser::parse("modified-main.out");
     shade_so::HandleLazySymbolBinding(src.get(), dst.get(), out.get())();
     shade_so::MergeTextSection(src.get(), dst.get(), out.get())();
     shade_so::HandleStrictSymbolBinding(src.get(), dst.get(), out.get())();
