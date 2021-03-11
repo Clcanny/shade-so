@@ -30,8 +30,8 @@ int main() {
 
     shade_so::HandleLazySymbolBinding(src.get(), dst.get(), out.get())();
     shade_so::MergeTextSection(src.get(), dst.get(), out.get())();
+    shade_so::HandleStrictSymbolBinding(src.get(), dst.get(), out.get())();
     shade_so::PatchRipInsts(src.get(), dst.get(), out.get())();
-    // shade_so::HandleStrictSymbolBinding(src.get(), dst.get(), out.get())();
     out->write("modified-main.out");
 
     // Set relocation and symbol done.
