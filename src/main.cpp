@@ -30,22 +30,21 @@ int main() {
     std::unique_ptr<LIEF::ELF::Binary> out(
         LIEF::ELF::Parser::parse("main.out"));
 
-    using shade_so::ExtendSection;
-    ExtendSection(out.get(), ".plt.got", src->get_section(".plt.got").size())();
-    ExtendSection(out.get(), ".got", src->get_section(".got").size())();
-    ExtendSection(out.get(), ".dynsym", src->get_section(".dynsym").size())();
-    ExtendSection(out.get(), ".symtab", src->get_section(".symtab").size())();
-    ExtendSection(
-        out.get(), ".rela.dyn", src->get_section(".rela.dyn").size())();
-    ExtendSection(out.get(), ".strtab", src->get_section(".strtab").size())();
-    ExtendSection(out.get(), ".text", src->get_section(".text").size())();
-
-    ExtendSection(out.get(), ".plt", src->get_section(".plt").size())();
-    ExtendSection(out.get(), ".got.plt", src->get_section(".got.plt").size())();
-    ExtendSection(
-        out.get(), ".rela.plt", src->get_section(".rela.plt").size())();
-    ExtendSection(out.get(), ".dynstr", src->get_section(".dynstr").size())();
-    ExtendSection(out.get(), ".rodata", src->get_section(".rodata").size())();
+    for (const std::string& sec_name : std::vector<std::string>{".plt.got",
+                                                                ".got",
+                                                                ".dynsym",
+                                                                ".symtab",
+                                                                ".rela.dyn",
+                                                                ".strtab",
+                                                                ".text",
+                                                                ".plt",
+                                                                ".got.plt",
+                                                                ".rela.plt",
+                                                                ".dynstr",
+                                                                ".rodata"}) {
+        shade_so::ExtendSection(
+            out.get(), sec_name, src->get_section(sec_name).size())();
+    }
 
     shade_so::MergeSection(src.get(), dst.get(), out.get(), ".rodata", 0)();
     shade_so::HandleLazySymbolBinding(src.get(), dst.get(), out.get())();
