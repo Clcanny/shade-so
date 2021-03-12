@@ -185,9 +185,6 @@ void HandleLazySymbolBinding::handle_plt_entry_inst<2>(
 
     uint64_t out_plt_va =
         out_->get_section(section_names::kPlt).virtual_address();
-    // TODO(junbin.rjb)
-    // Why?
-    // uint64_t value = out_plt_va - (out_plt_va + offset + inst.length);
     int64_t value = -1 * (offset + inst.length);
     std::vector<uint8_t> bytes_to_be_patched;
     for (auto i = 0; i < inst.raw.imm[0].size / 8; i++) {
@@ -209,17 +206,11 @@ void HandleLazySymbolBinding::fill(uint64_t entries_num) {
     assert(plt_entry_size == dst_plt.entry_size());
     assert(plt_entry_size == out_plt.entry_size());
     // The first entry of .plt section is a stub.
-    // TODO(junbin.rjb)
-    // assert(out_plt.size() ==
-    //        dst_plt.size() + (src_plt.size() - 1 * plt_entry_size));
     out_->patch_address(
         out_plt.virtual_address() + dst_plt.size(),
         std::vector<uint8_t>(src_plt_content.begin() + 1 * plt_entry_size,
                              src_plt_content.end()));
     std::vector<uint8_t> out_plt_content = out_plt.content();
-    // TODO(junbin.rjb)
-    // assert(out_plt_content.size() ==
-    //        dst_plt.size() + (src_plt.size() - 1 * plt_entry_size));
 
     assert(src_plt.size() == (1 + entries_num) * plt_entry_size);
     for (int entry = 0; entry < entries_num; entry++) {
@@ -262,206 +253,5 @@ ZydisDecodedOperand HandleLazySymbolBinding::get_exactly_one_visible_operand(
     assert(std::count_if(begin, end, visible) == 1);
     return *std::find_if(begin, end, visible);
 }
-
-// void HandleLazySymbolBinding::handle_plt() {
-//     const Section& src_plt = src_->get_section(section_names::kPlt);
-//     std::vector<uint8_t> src_content = src_plt.content();
-//     uint8_t* src_data = src_content.data();
-//     auto size = src_plt.entry_size();
-
-//     const Section& dst_plt = dst_->get_section(section_names::kPlt);
-//     const Section& out_plt = out_->get_section(section_names::kPlt);
-//     assert(out_plt.size() == src_plt.size() + dst_plt.size());
-//     out_->patch_address(
-//         out_plt.virtual_address() + dst_plt.size(),
-//         std::vector<uint8_t>(src_data + size, src_data + src_plt.size()));
-
-//     // The first entry of .plt section is a stub.
-//     LIEF::ELF::Section& got_plt = src_->get_section(section_names::kGotPlt);
-//     decltype(size) offset = 0;
-//     for (int i = 0; i < 3; i++) {
-//         ZydisDecodedInstruction instr;
-//         assert(ZYAN_SUCCESS(ZydisDecoderDecodeBuffer(
-//             &decoder_, data + offset, plt.entry_size() - offset, &instr)));
-//         offset += instr.length;
-
-//         // TODO(junbin.rjb)
-//         // Refactor.
-//         if (i == 0) {
-//             assert(instr.mnemonic == ZYDIS_MNEMONIC_PUSH);
-//             // kLogger->debug("The 2st instruction of plt stub is push.");
-
-//             auto begin = instr.operands;
-//             auto end = instr.operands + instr.operand_count;
-//             auto is_visible_operand = [](const ZydisDecodedOperand& operand)
-//             {
-//                 return operand.visibility ==
-//                 ZYDIS_OPERAND_VISIBILITY_EXPLICIT;
-//             };
-//             assert(std::count_if(begin, end, is_visible_operand) == 1);
-//             // kLogger->debug("The 1st instruction has 1 visible operands.");
-
-//             const ZydisDecodedOperand& operand =
-//                 *std::find_if(begin, end, is_visible_operand);
-//             assert(operand.type == ZYDIS_OPERAND_TYPE_MEMORY &&
-//                    operand.mem.base == ZYDIS_REGISTER_RIP &&
-//                    operand.mem.disp.has_displacement);
-//             uint64_t rip = plt.virtual_address() + offset;
-//             uint64_t arg = rip + operand.mem.disp.value;
-//             // kLogger->debug("Push argument is 0x{0:x}.", arg);
-//             uint64_t expected =
-//                 got_plt.virtual_address() + 1 * got_plt.entry_size();
-//             // kLogger->debug(
-//             //     "Start addr of the 2nd entry of {} section is 0x{:x}.",
-//             //     section_names::kGotPlt,
-//             //     expected);
-//             assert(arg == expected);
-//         } else if (i == 1) {
-//             assert(instr.mnemonic == ZYDIS_MNEMONIC_JMP);
-//             // kLogger->debug("The 2nd instruction of plt stub is jmp.");
-
-//             auto begin = instr.operands;
-//             auto end = instr.operands + instr.operand_count;
-//             auto is_visible_operand = [](const ZydisDecodedOperand& operand)
-//             {
-//                 return operand.visibility ==
-//                 ZYDIS_OPERAND_VISIBILITY_EXPLICIT;
-//             };
-//             assert(std::count_if(begin, end, is_visible_operand) == 1);
-//             // kLogger->debug("The 2nd instruction has 1 visible operands.");
-
-//             const ZydisDecodedOperand& operand =
-//                 *std::find_if(begin, end, is_visible_operand);
-//             assert(operand.type == ZYDIS_OPERAND_TYPE_MEMORY &&
-//                    operand.mem.base == ZYDIS_REGISTER_RIP &&
-//                    operand.mem.disp.has_displacement);
-//             uint64_t rip = plt.virtual_address() + offset;
-//             uint64_t arg = rip + operand.mem.disp.value;
-//             // kLogger->debug("Jump argument is 0x{0:x}.", arg);
-//             uint64_t expected =
-//                 got_plt.virtual_address() + 2 * got_plt.entry_size();
-//             // kLogger->debug(
-//             //     "Start addr of the 3rd entry of {} section is 0x{:x}.",
-//             //     section_names::kGotPlt,
-//             //     expected);
-//             assert(arg == expected);
-//         } else if (i == 2) {
-//             assert(instr.mnemonic == ZYDIS_MNEMONIC_NOP);
-//             // kLogger->debug("The 3rd instruction of plt stub is nop.");
-//         }
-//     }
-
-//     uint64_t begin = (src_id + 1) * plt.entry_size();
-//     uint64_t end = (src_id + 2) * plt.entry_size();
-//     // uint64_t offset = begin;
-//     offset = begin;
-//     uint64_t instrCnt = 0;
-//     for (int i = 0; i < 3; i++) {
-//         ZydisDecodedInstruction instr;
-//         assert(ZYAN_SUCCESS(ZydisDecoderDecodeBuffer(
-//             &decoder_, content.data() + offset, end - offset, &instr)));
-//         offset += instr.length;
-
-//         if (i == 0) {
-//             assert(instr.mnemonic == ZYDIS_MNEMONIC_JMP);
-//             // kLogger->debug("The 1st instruction of plt entry is jmp.");
-
-//             auto b = instr.operands;
-//             auto e = instr.operands + instr.operand_count;
-//             auto is_visible_operand = [](const ZydisDecodedOperand& operand)
-//             {
-//                 return operand.visibility ==
-//                 ZYDIS_OPERAND_VISIBILITY_EXPLICIT;
-//             };
-//             assert(std::count_if(b, e, is_visible_operand) == 1);
-//             // kLogger->debug("The 2nd instruction has 1 visible operands.");
-
-//             const ZydisDecodedOperand& operand =
-//                 *std::find_if(b, e, is_visible_operand);
-//             assert(operand.type == ZYDIS_OPERAND_TYPE_MEMORY &&
-//                    operand.mem.base == ZYDIS_REGISTER_RIP &&
-//                    operand.mem.disp.has_displacement);
-//             uint64_t rip = plt.virtual_address() + offset;
-//             uint64_t arg = rip + operand.mem.disp.value;
-//             // kLogger->debug("Jump argument is 0x{0:x}.", arg);
-//             uint64_t expected =
-//                 got_plt.virtual_address() + (3 + src_id) *
-//                 got_plt.entry_size();
-//             // kLogger->debug("0x{:x}", got_plt.entry_size());
-//             // kLogger->debug(
-//             //     "Start addr of the 3rd entry of {} section is 0x{:x}.",
-//             //     section_names::kGotPlt,
-//             //     expected);
-//             assert(arg == expected);
-//             // Get got entry.
-//             std::vector<uint8_t> g = got_plt.content();
-//             uint64_t* d = reinterpret_cast<uint64_t*>(g.data());
-//             // Other place has checked size of got entry.
-//             // kLogger->debug("got: 0x{:x}", d[src_id + 3]);
-//             assert(d[src_id + 3] == plt.virtual_address() + offset);
-//         } else if (i == 1) {
-//             assert(instr.mnemonic == ZYDIS_MNEMONIC_PUSH);
-//             // kLogger->debug("The 2nd instruction of plt stub is push.");
-
-//             auto begin = instr.operands;
-//             auto end = instr.operands + instr.operand_count;
-//             auto is_visible_operand = [](const ZydisDecodedOperand& operand)
-//             {
-//                 return operand.visibility ==
-//                 ZYDIS_OPERAND_VISIBILITY_EXPLICIT;
-//             };
-//             assert(std::count_if(begin, end, is_visible_operand) == 1);
-//             // kLogger->debug("The 2nd instruction has 1 visible operands.");
-//             const ZydisDecodedOperand& operand =
-//                 *std::find_if(begin, end, is_visible_operand);
-//             assert(operand.type == ZYDIS_OPERAND_TYPE_IMMEDIATE &&
-//                    operand.imm.is_signed == 1 && operand.imm.is_relative == 0
-//                    && operand.imm.value.s == src_id);
-
-//             const Section& rela_plt = src_->get_section(".rela.plt");
-//             std::vector<uint8_t> r = rela_plt.content();
-//             Elf64_Rela* er = reinterpret_cast<Elf64_Rela*>(r.data());
-//             assert(er[src_id].r_offset ==
-//                    got_plt.virtual_address() +
-//                        (3 + src_id) * got_plt.entry_size());
-//         } else if (i == 2) {
-//             assert(instr.mnemonic == ZYDIS_MNEMONIC_JMP);
-//             // kLogger->debug("The 1st instruction of plt entry is jmp.");
-
-//             auto b = instr.operands;
-//             auto e = instr.operands + instr.operand_count;
-//             auto is_visible_operand = [](const ZydisDecodedOperand& operand)
-//             {
-//                 return operand.visibility ==
-//                 ZYDIS_OPERAND_VISIBILITY_EXPLICIT;
-//             };
-//             assert(std::count_if(b, e, is_visible_operand) == 1);
-//             // kLogger->debug("The 2nd instruction has 1 visible operands.");
-
-//             const ZydisDecodedOperand& operand =
-//                 *std::find_if(b, e, is_visible_operand);
-//             assert(operand.type == ZYDIS_OPERAND_TYPE_IMMEDIATE &&
-//                    operand.imm.is_signed == 1 && operand.imm.is_relative ==
-//                    1);
-//             // kLogger->debug("{:x}", plt.entry_size());
-//             // kLogger->debug("{:d}", 1 + src_id);
-//             assert(operand.imm.value.s == -1 * (2 + src_id) *
-//             plt.entry_size()); uint64_t ra = begin + offset;
-//             assert(ZYAN_SUCCESS(ZydisCalcAbsoluteAddress(
-//                 &instr,
-//                 &operand,
-//                 plt.virtual_address() + offset - instr.length,
-//                 &ra)));
-//             // kLogger->debug("0x{:x}, 0x{:x}, 0x{:x}, 0x{:x}",
-//             //                plt.virtual_address(),
-//             //                begin,
-//             //                offset,
-//             //                ra);
-//         }
-//         // offset += instr.length;
-//     }
-//     assert(offset == end);
-//     // kLogger->debug("here");
-// }
 
 }  // namespace shade_so

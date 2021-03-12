@@ -21,15 +21,13 @@ MergeSection::MergeSection(Binary* src,
       empty_value_(empty_value) {
 }
 
-uint64_t MergeSection::operator()() {
+void MergeSection::operator()() {
     const Section& src_sec = src_->get_section(section_name_);
     const Section& dst_sec = dst_->get_section(section_name_);
     Section& out_sec = out_->get_section(section_name_);
-    // assert(src_sec.alignment() == out_sec.alignment());
     uint64_t dst_origin_va = dst_sec.virtual_address();
     uint64_t dst_origin_off = dst_sec.offset();
     uint64_t dst_origin_sz = dst_sec.size();
-    // assert(src_sec.information() == out_sec.information());
 
     // Fill out_sec hole with src_sec.
     const std::vector<uint8_t>& src_content = src_sec.content();
@@ -42,10 +40,6 @@ uint64_t MergeSection::operator()() {
                 src_content.data(),
                 src_content.size());
     out_sec.content(out_content);
-
-    // TODO(junbin.rjb)
-    // return out_sec.virtual_address() + (out_content.size() - extend_sz);
-    return 0;
 }
 
 }  // namespace shade_so

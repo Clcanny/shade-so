@@ -25,7 +25,7 @@ class MergeSection {
                  Binary* out,
                  const std::string& section_name,
                  uint8_t empty_value);
-    uint64_t operator()();
+    void operator()();
 
  private:
     Binary* src_;

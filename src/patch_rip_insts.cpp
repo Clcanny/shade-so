@@ -192,11 +192,12 @@ void PatchRipInsts::patch(
                 &new_inst.operands[0] + (begin - &inst.operands[0]),
                 out_cur_va,
                 &new_out_jump_to)));
-            // TODO(junbin.rjb)
-            // Recover.
-            // assert(new_out_jump_to - out_to_sec.virtual_address() -
-            //            (from_dst ? 0 : dst_to_sec.size()) ==
-            //        in_jump_to - in_to_sec.virtual_address());
+            assert(new_out_jump_to - out_to_sec.virtual_address() -
+                       (from_dst ? 0 : dst_to_sec.size()) ==
+                   in_jump_to - in_to_sec.virtual_address() -
+                       ((!from_dst && in_to_sec.name() == ".plt")
+                            ? in_to_sec.entry_size()
+                            : 0));
             // kLogger->info(
             //     "Instruction at 0x{:x} changes from '{:s}' to '{:s}'.",
             //     "Instruction at 0x{:x} changes from '{:s}' to '{:s}'.",
