@@ -7,5 +7,5 @@ void bar2();
 void foo() {
     bar();
     bar2();
-    std::cout << std::endl;
+    std::cout << "foo" << std::endl;
 }

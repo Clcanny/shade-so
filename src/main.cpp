@@ -14,6 +14,7 @@
 #include "src/extend_section.h"
 #include "src/handle_lazy_symbol_binding.h"
 #include "src/handle_strict_symbol_binding.h"
+#include "src/merge_section.h"
 #include "src/merge_text_section.h"
 #include "src/patch_rip_insts.h"
 #include "src/relocate_jump_slot_entry.h"
@@ -37,25 +38,26 @@ int main() {
     ExtendSection(
         out.get(), ".rela.dyn", src->get_section(".rela.dyn").size())();
     ExtendSection(out.get(), ".strtab", src->get_section(".strtab").size())();
-    // ExtendSection(out.get(), ".symtab", src->get_section(".symtab").size())();
     ExtendSection(out.get(), ".text", src->get_section(".text").size())();
 
     ExtendSection(out.get(), ".plt", src->get_section(".plt").size())();
     ExtendSection(out.get(), ".got.plt", src->get_section(".got.plt").size())();
     ExtendSection(
         out.get(), ".rela.plt", src->get_section(".rela.plt").size())();
-    // ExtendSection(out.get(), ".dynsym", src->get_section(".dynsym").size())();
     ExtendSection(out.get(), ".dynstr", src->get_section(".dynstr").size())();
-    // out->write("modified-main.out");
+    ExtendSection(out.get(), ".rodata", src->get_section(".rodata").size())();
 
-    // out = LIEF::ELF::Parser::parse("modified-main.out");
+    shade_so::MergeSection(src.get(), dst.get(), out.get(), ".rodata", 0)();
     shade_so::HandleLazySymbolBinding(src.get(), dst.get(), out.get())();
     shade_so::MergeTextSection(src.get(), dst.get(), out.get())();
     shade_so::HandleStrictSymbolBinding(src.get(), dst.get(), out.get())();
     shade_so::PatchRipInsts(src.get(), dst.get(), out.get())();
-    out->write("modified-main.out");
 
     // Set relocation and symbol done.
+    // Reset symbol value.
+    // TODO(junbin.rjb)
+    // Fix LIEF bug.
+    out->write("modified-main.out");
     out = LIEF::ELF::Parser::parse("modified-main.out");
     shade_so::RelocateJumpSlotEntry(out.get())();
     out->remove_library("libfoo.so");

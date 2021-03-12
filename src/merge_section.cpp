@@ -25,7 +25,7 @@ uint64_t MergeSection::operator()() {
     const Section& src_sec = src_->get_section(section_name_);
     const Section& dst_sec = dst_->get_section(section_name_);
     Section& out_sec = out_->get_section(section_name_);
-    assert(src_sec.alignment() == out_sec.alignment());
+    // assert(src_sec.alignment() == out_sec.alignment());
     uint64_t dst_origin_va = dst_sec.virtual_address();
     uint64_t dst_origin_off = dst_sec.offset();
     uint64_t dst_origin_sz = dst_sec.size();
