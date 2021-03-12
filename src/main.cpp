@@ -37,14 +37,14 @@ int main() {
     ExtendSection(
         out.get(), ".rela.dyn", src->get_section(".rela.dyn").size())();
     ExtendSection(out.get(), ".strtab", src->get_section(".strtab").size())();
-    ExtendSection(out.get(), ".symtab", src->get_section(".symtab").size())();
+    // ExtendSection(out.get(), ".symtab", src->get_section(".symtab").size())();
     ExtendSection(out.get(), ".text", src->get_section(".text").size())();
 
     ExtendSection(out.get(), ".plt", src->get_section(".plt").size())();
     ExtendSection(out.get(), ".got.plt", src->get_section(".got.plt").size())();
     ExtendSection(
         out.get(), ".rela.plt", src->get_section(".rela.plt").size())();
-    ExtendSection(out.get(), ".dynsym", src->get_section(".dynsym").size())();
+    // ExtendSection(out.get(), ".dynsym", src->get_section(".dynsym").size())();
     ExtendSection(out.get(), ".dynstr", src->get_section(".dynstr").size())();
     // out->write("modified-main.out");
 

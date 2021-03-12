@@ -166,9 +166,18 @@ void PatchRipInsts::patch(
                                 (in_jump_to - in_to_sec.virtual_address()) -
                                 out_rip;
             if (!from_dst) {
+                // TODO(junbin.rjb)
+                if (in_to_sec.name() == ".init" && in_sec.name() == ".plt") {
+                    continue;
+                }
                 if (in_to_sec.name() == ".plt") {
+                    // TODO(junbin.rjb)
+                    if (in_sec.name() == ".init") {
+                        continue;
+                    }
                     new_value -= 1 * in_to_sec.entry_size();
                 } else if (in_to_sec.name() == ".got.plt") {
+                    continue;
                     // TODO(junbin.rjb)
                     // Why 2 not 3?
                     new_value -=

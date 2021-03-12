@@ -120,7 +120,8 @@ void HandleLazySymbolBinding::handle_plt_entry_inst<0>(
     bytes_to_be_patched.clear();
     auto got_plt_es = out_got_plt_sec.entry_size();
     for (auto i = 0; i < got_plt_es; i++) {
-        bytes_to_be_patched.emplace_back(((cur_va + inst.length) >> (8 * i)) & 0xFF);
+        bytes_to_be_patched.emplace_back(((cur_va + inst.length) >> (8 * i)) &
+                                         0xFF);
     }
     assert(out_got_plt_sec.virtual_address() + dst_got_plt_sec.size() +
                entry_id * got_plt_es + bytes_to_be_patched.size() <=
@@ -187,7 +188,7 @@ void HandleLazySymbolBinding::handle_plt_entry_inst<2>(
     // TODO(junbin.rjb)
     // Why?
     // uint64_t value = out_plt_va - (out_plt_va + offset + inst.length);
-    uint64_t value = out_plt_va - (out_plt_va + offset + inst.length - 9);
+    int64_t value = -1 * (offset + inst.length);
     std::vector<uint8_t> bytes_to_be_patched;
     for (auto i = 0; i < inst.raw.imm[0].size / 8; i++) {
         bytes_to_be_patched.emplace_back((value >> (8 * i)) & 0xFF);
