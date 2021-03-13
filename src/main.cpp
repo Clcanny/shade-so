@@ -11,6 +11,7 @@
 #include <LIEF/ELF.hpp>
 
 // #include "spdlog/spdlog.h"
+#include "src/elf.h"
 #include "src/extend_section.h"
 #include "src/handle_lazy_symbol_binding.h"
 #include "src/handle_strict_symbol_binding.h"
@@ -41,7 +42,8 @@ int main() {
                                                                 ".got.plt",
                                                                 ".rela.plt",
                                                                 ".dynstr",
-                                                                ".rodata"}) {
+                                                                ".rodata",
+                                                                ".data"}) {
         shade_so::ExtendSection(
             out.get(), sec_name, src->get_section(sec_name).size())();
     }
@@ -50,6 +52,45 @@ int main() {
     shade_so::HandleLazySymbolBinding(src.get(), dst.get(), out.get())();
     shade_so::MergeTextSection(src.get(), dst.get(), out.get())();
     shade_so::HandleStrictSymbolBinding(src.get(), dst.get(), out.get())();
+
+    for (auto i = 0; i < src->relocations().size(); i++) {
+        const auto& src_reloc = src->relocations()[i];
+        if (src_reloc.type() !=
+            static_cast<uint32_t>(shade_so::RelocType::R_X86_64_RELATIVE)) {
+            continue;
+        }
+        if (src_reloc.address() != 0x4040) {
+            continue;
+        }
+        const LIEF::ELF::Section& src_sec =
+            src->section_from_virtual_address(src_reloc.address());
+        const LIEF::ELF::Section& dst_sec = dst->get_section(src_sec.name());
+        const LIEF::ELF::Section& out_sec = out->get_section(src_sec.name());
+        auto out_sec_id =
+            std::find_if(out->sections().begin(),
+                         out->sections().end(),
+                         [&out_sec](const LIEF::ELF::Section& sec) {
+                             return sec == out_sec;
+                         }) -
+            out->sections().begin();
+        // assert(src_reloc.value() == 0);
+
+        const LIEF::ELF::Section& src_to_sec =
+            src->section_from_virtual_address(src_reloc.addend());
+        const LIEF::ELF::Section& dst_to_sec =
+            dst->get_section(src_to_sec.name());
+        const LIEF::ELF::Section& out_to_sec =
+            out->get_section(src_to_sec.name());
+
+        out->add_dynamic_relocation(LIEF::ELF::Relocation(
+            out_sec.virtual_address() + dst_sec.size() -
+                (src_reloc.address() - src_sec.virtual_address()) + 0x10,
+            src_reloc.type(),
+            out_to_sec.virtual_address() + dst_to_sec.size() +
+                (src_reloc.addend() - src_to_sec.virtual_address()),
+            src_reloc.is_rela()));
+    }
+
     shade_so::PatchRipInsts(src.get(), dst.get(), out.get())();
 
     // Set relocation and symbol done.

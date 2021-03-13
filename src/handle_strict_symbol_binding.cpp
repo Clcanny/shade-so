@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <string>
 
 #include "src/elf.h"
 #include "src/extend_section.h"
@@ -28,8 +29,10 @@ void HandleStrictSymbolBinding::operator()() {
 
     for (auto i = 0; i < src_->relocations().size(); i++) {
         const LIEF::ELF::Relocation& src_reloc = src_->relocations()[i];
+        // TODO(junbin.rjb)
+        // Split.
         if (src_reloc.type() ==
-            static_cast<uint32_t>(RelocType::R_X86_64_GLOB_DAT)) {
+                static_cast<uint32_t>(RelocType::R_X86_64_GLOB_DAT)) {
             const LIEF::ELF::Section& src_sec =
                 src_->section_from_virtual_address(src_reloc.address());
             const LIEF::ELF::Section& dst_sec =
@@ -45,6 +48,18 @@ void HandleStrictSymbolBinding::operator()() {
                 out_->sections().begin();
 
             const LIEF::ELF::Symbol& src_sym = src_reloc.symbol();
+            uint64_t value = 0;
+            if (src_->has_section_with_va(src_sym.value())) {
+                const auto& src_to_sec =
+                    src_->section_from_virtual_address(src_sym.value());
+                const std::string& name = src_to_sec.name();
+                value = out_->get_section(name).virtual_address() +
+                        dst_->get_section(name).size() +
+                        (src_sym.value() - src_to_sec.virtual_address());
+            }
+            // if (src_reloc.type() == static_cast<uint32_t>(RelocType::R_X86_64_RELATIVE)) {
+            //     value = 0x8b01 + (0x8b01 - 0x8001);
+            // }
             LIEF::ELF::Symbol out_sym(src_sym.name(),
                                       src_sym.type(),
                                       src_sym.binding(),
@@ -52,7 +67,7 @@ void HandleStrictSymbolBinding::operator()() {
                                       // out_sec_id,
                                       src_sym.section_idx() == 0 ? 0
                                                                  : out_sec_id,
-                                      src_sym.value(),
+                                      value,
                                       src_sym.size());
             out_->add_static_symbol(out_sym);
             LIEF::ELF::Symbol& sym = out_->add_dynamic_symbol(out_sym, nullptr);
