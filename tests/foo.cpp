@@ -11,7 +11,7 @@ static std::string s3 = "s3";
 void foo() {
     bar();
     bar2();
-    // std::cout << "foo" << std::endl;
+    std::cout << "foo" << std::endl;
     std::cout << s1 << std::endl;
     std::cout << s2 << std::endl;
     std::cout << s3 << std::endl;
