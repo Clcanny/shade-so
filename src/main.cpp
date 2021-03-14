@@ -31,27 +31,61 @@ int main() {
     std::unique_ptr<LIEF::ELF::Binary> out(
         LIEF::ELF::Parser::parse("main.out"));
 
-    for (const std::string& sec_name : std::vector<std::string>{".plt.got",
-                                                                ".got",
-                                                                ".dynsym",
-                                                                ".symtab",
-                                                                ".rela.dyn",
-                                                                ".strtab",
-                                                                ".text",
-                                                                ".plt",
-                                                                ".got.plt",
-                                                                ".rela.plt",
-                                                                ".dynstr",
-                                                                ".rodata",
-                                                                ".data"}) {
+    for (const std::string& sec_name :
+         std::vector<std::string>{".plt.got",
+                                  ".got",
+                                  ".dynsym",
+                                  ".symtab",
+                                  ".rela.dyn",
+                                  ".strtab",
+                                  ".text",
+                                  ".plt",
+                                  ".got.plt",
+                                  ".rela.plt",
+                                  ".dynstr",
+                                  ".rodata",
+                                  ".data",
+                                  ".init",
+                                  ".init_array"}) {
         shade_so::ExtendSection(
             out.get(), sec_name, src->get_section(sec_name).size())();
     }
 
     shade_so::MergeSection(src.get(), dst.get(), out.get(), ".rodata", 0)();
+    // shade_so::MergeSection(src.get(), dst.get(), out.get(), ".init", 0x90)();
+    // shade_so::MergeSection(
+    //     src.get(), dst.get(), out.get(), ".init_array", 0x0)();
     shade_so::HandleLazySymbolBinding(src.get(), dst.get(), out.get())();
     shade_so::MergeTextSection(src.get(), dst.get(), out.get())();
     shade_so::HandleStrictSymbolBinding(src.get(), dst.get(), out.get())();
+
+    // {
+    //     const std::string& sec_name = ".init_array";
+    //     const auto& src_sec = src->get_section(sec_name);
+    //     const auto& dst_sec = dst->get_section(sec_name);
+    //     const auto& out_sec = out->get_section(sec_name);
+    //     std::vector<uint8_t> out_content = out_sec.content();
+    //     for (uint64_t offset = dst_sec.size(); offset < out_content.size();
+    //          offset += out_sec.entry_size()) {
+    //         int64_t value = 0;
+    //         for (auto i = 0; i < out_sec.entry_size(); i++) {
+    //             auto t = out_content[offset + i] * 1L;
+    //             value |= t << (8 * i);
+    //         }
+    //         const auto& src_to_sec = src->section_from_virtual_address(value);
+    //         const auto& dst_to_sec = dst->get_section(src_to_sec.name());
+    //         const auto& out_to_sec = out->get_section(src_to_sec.name());
+    //         value = out_to_sec.virtual_address() + dst_to_sec.size() +
+    //                 (value - src_to_sec.virtual_address());
+    //         std::cout << std::hex << value << std::endl;
+    //         std::vector<uint8_t> bytes_to_be_patched;
+    //         for (auto i = 0; i < out_sec.entry_size(); i++) {
+    //             bytes_to_be_patched.emplace_back((value >> (8 * i)) & 0xFF);
+    //         }
+    //         out->patch_address(out_sec.virtual_address() + offset,
+    //                            bytes_to_be_patched);
+    //     }
+    // }
 
     for (auto i = 0; i < src->relocations().size(); i++) {
         const auto& src_reloc = src->relocations()[i];
@@ -59,9 +93,9 @@ int main() {
             static_cast<uint32_t>(shade_so::RelocType::R_X86_64_RELATIVE)) {
             continue;
         }
-        if (src_reloc.address() != 0x4040) {
-            continue;
-        }
+        // if (src_reloc.address() != 0x4040) {
+        //     continue;
+        // }
         const LIEF::ELF::Section& src_sec =
             src->section_from_virtual_address(src_reloc.address());
         const LIEF::ELF::Section& dst_sec = dst->get_section(src_sec.name());
