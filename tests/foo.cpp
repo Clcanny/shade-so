@@ -7,6 +7,7 @@ void bar2();
 const char* s1 = "s1";
 const std::string s2 = "s2";
 static std::string s3 = "s3";
+// thread_local const char* s4 = "s4";
 // static thread_local std::string s4 = "s4";
 void foo() {
     bar();

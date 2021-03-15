@@ -60,7 +60,9 @@ int main() {
     shade_so::HandleStrictSymbolBinding(src.get(), dst.get(), out.get())();
 
     {
-        LIEF::ELF::DynamicEntryArray* arr = out->get(LIEF::ELF::DYNAMIC_TAGS::DT_INIT_ARRAY).as<LIEF::ELF::DynamicEntryArray>();
+        LIEF::ELF::DynamicEntryArray* arr =
+            out->get(LIEF::ELF::DYNAMIC_TAGS::DT_INIT_ARRAY)
+                .as<LIEF::ELF::DynamicEntryArray>();
 
         const std::string& sec_name = ".init_array";
         const auto& src_sec = src->get_section(sec_name);
@@ -89,8 +91,9 @@ int main() {
         }
 
         // for (auto i = 0; i < out->dynamic_entries().size(); i++) {
-        //     LIEF::ELF::DynamicEntry& dynamic_entry = out->dynamic_entries()[i];
-        //     if (dynamic_entry.tag() == LIEF::ELF::DYNAMIC_TAGS::DT_INIT_ARRAYSZ) {
+        //     LIEF::ELF::DynamicEntry& dynamic_entry =
+        //     out->dynamic_entries()[i]; if (dynamic_entry.tag() ==
+        //     LIEF::ELF::DYNAMIC_TAGS::DT_INIT_ARRAYSZ) {
         //         std::cout << "here" << std::endl;
         //         std::cout << std::hex << out_content.size() << std::endl;
         //         dynamic_entry.value(out_content.size());
