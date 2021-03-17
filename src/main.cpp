@@ -51,6 +51,30 @@ int main() {
             out.get(), sec_name, src->get_section(sec_name).size())();
     }
 
+    // do {
+    //     if (!src->has_segment(LIEF::ELF::SEGMENT_TYPES::PT_TLS)) {
+    //         break;
+    //     }
+    //     const auto& src_seg = src->get(LIEF::ELF::SEGMENT_TYPES::PT_TLS);
+    //     LIEF::ELF::Segment* out_seg = nullptr;
+    //     if (out->has_segment(LIEF::ELF::SEGMENT_TYPES::PT_TLS)) {
+    //         out_seg = &out->get(LIEF::ELF::SEGMENT_TYPES::PT_TLS);
+    //     } else {
+    //         LIEF::ELF::Segment seg;
+    //         seg.type(LIEF::ELF::SEGMENT_TYPES::PT_TLS);
+    //         seg.flags(src_seg.flags());
+    //         seg.alignment(src_seg.alignment());
+    //         out_seg = &out->add_segment(seg);
+    //     }
+    //     // if (src->has_section(".tdata")) {
+    //     //     if (!out->has_section(".tdata")) {
+    //     //         out->add_section
+    //     //     }
+    //     //     shade_so::ExtendSection(
+    //     //         out.get(), ".tdata", src->get_section(".tdata").size())();
+    //     // }
+    // } while (false);
+
     shade_so::MergeSection(src.get(), dst.get(), out.get(), ".rodata", 0)();
     // shade_so::MergeSection(src.get(), dst.get(), out.get(), ".init", 0x90)();
     shade_so::MergeSection(
