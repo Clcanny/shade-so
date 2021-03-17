@@ -6,6 +6,7 @@
 // Description: https://google.github.io/styleguide/cppguide.html
 
 #include <cstdint>
+#include <map>
 #include <memory>
 
 #include <LIEF/ELF.hpp>
@@ -31,6 +32,7 @@ int main() {
     std::unique_ptr<LIEF::ELF::Binary> out(
         LIEF::ELF::Parser::parse("main.out"));
 
+    std::map<std::string, shade_so::SecMallocMgr> sec_malloc_mgrs;
     for (const std::string& sec_name :
          std::vector<std::string>{".plt.got",
                                   ".got",
@@ -51,7 +53,12 @@ int main() {
                                   ".init_array"}) {
         // shade_so::ExtendSection(
         //     out.get(), sec_name, src->get_section(sec_name).size())();
-        shade_so::SecMallocMgr(*dst, *src, out.get(), sec_name, false).malloc_dependency();
+        sec_malloc_mgrs.emplace(
+            sec_name,
+            shade_so::SecMallocMgr(*dst, *src, out.get(), sec_name, false));
+    }
+    for (auto [_, mgr] : sec_malloc_mgrs) {
+        mgr.malloc_dependency();
     }
 
     do {
@@ -112,7 +119,8 @@ int main() {
     //                     out_reloc.symbol(&out_sym);
     //                 }
     //             }
-    //             out_reloc.address(out->get_section(".got").virtual_address() +
+    //             out_reloc.address(out->get_section(".got").virtual_address()
+    //             +
     //                               dst->get_section(".got").size() +
     //                               (src_reloc.address() -
     //                                src->get_section(".got").virtual_address()));
