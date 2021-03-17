@@ -27,7 +27,12 @@ struct Elf64_Rela {
     Elf64_Sxword r_addend;  // Constant addend used to compute value.
 };
 
-enum class RelocType { R_X86_64_GLOB_DAT = 6, R_X86_64_RELATIVE = 8 };
+enum class RelocType {
+    R_X86_64_GLOB_DAT = 6,
+    R_X86_64_RELATIVE = 8,
+    R_X86_64_DTPMOD64 = 16,
+    R_X86_64_DTPOFF64 = 17
+};
 
 }  // namespace shade_so
 

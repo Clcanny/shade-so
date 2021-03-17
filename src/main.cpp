@@ -46,42 +46,79 @@ int main() {
                                   ".rodata",
                                   ".data",
                                   // ".init",
+                                  // ".tdata",
+                                  // ".tbss",
                                   ".init_array"}) {
         shade_so::ExtendSection(
             out.get(), sec_name, src->get_section(sec_name).size())();
     }
 
-    // do {
-    //     if (!src->has_segment(LIEF::ELF::SEGMENT_TYPES::PT_TLS)) {
-    //         break;
-    //     }
-    //     const auto& src_seg = src->get(LIEF::ELF::SEGMENT_TYPES::PT_TLS);
-    //     LIEF::ELF::Segment* out_seg = nullptr;
-    //     if (out->has_segment(LIEF::ELF::SEGMENT_TYPES::PT_TLS)) {
-    //         out_seg = &out->get(LIEF::ELF::SEGMENT_TYPES::PT_TLS);
-    //     } else {
-    //         LIEF::ELF::Segment seg;
-    //         seg.type(LIEF::ELF::SEGMENT_TYPES::PT_TLS);
-    //         seg.flags(src_seg.flags());
-    //         seg.alignment(src_seg.alignment());
-    //         out_seg = &out->add_segment(seg);
-    //     }
-    //     // if (src->has_section(".tdata")) {
-    //     //     if (!out->has_section(".tdata")) {
-    //     //         out->add_section
-    //     //     }
-    //     //     shade_so::ExtendSection(
-    //     //         out.get(), ".tdata", src->get_section(".tdata").size())();
-    //     // }
-    // } while (false);
+    do {
+        // if (!src->has(LIEF::ELF::SEGMENT_TYPES::PT_TLS)) {
+        //     break;
+        // }
+        // const auto& src_seg = src->get(LIEF::ELF::SEGMENT_TYPES::PT_TLS);
+        // LIEF::ELF::Segment* out_seg = nullptr;
+        // if (out->has(LIEF::ELF::SEGMENT_TYPES::PT_TLS)) {
+        //     out_seg = &out->get(LIEF::ELF::SEGMENT_TYPES::PT_TLS);
+        // } else {
+        //     LIEF::ELF::Segment seg;
+        //     seg.type(LIEF::ELF::SEGMENT_TYPES::PT_TLS);
+        //     seg.flags(src_seg.flags());
+        //     seg.alignment(src_seg.alignment());
+        //     out_seg = &out->add_segment<>(seg, 0);
+        // }
+        // if (src->has_section(".tdata")) {
+        //     if (!out->has_section(".tdata")) {
+        //         out->add_section
+        //     }
+        //     shade_so::ExtendSection(
+        //         out.get(), ".tdata", src->get_section(".tdata").size())();
+        // }
+    } while (false);
 
     shade_so::MergeSection(src.get(), dst.get(), out.get(), ".rodata", 0)();
     // shade_so::MergeSection(src.get(), dst.get(), out.get(), ".init", 0x90)();
     shade_so::MergeSection(
         src.get(), dst.get(), out.get(), ".init_array", 0x0)();
+    // shade_so::MergeSection(src.get(), dst.get(), out.get(), ".tdata", 0x0)();
+    // shade_so::MergeSection(src.get(), dst.get(), out.get(), ".tbss", 0x0)();
+    shade_so::MergeSection(src.get(), dst.get(), out.get(), ".got", 0x0)();
     shade_so::HandleLazySymbolBinding(src.get(), dst.get(), out.get())();
     shade_so::MergeTextSection(src.get(), dst.get(), out.get())();
     shade_so::HandleStrictSymbolBinding(src.get(), dst.get(), out.get())();
+
+    // {
+    //     for (auto i = 0; i < src->dynamic_relocations().size(); i++) {
+    //         const auto& src_reloc = src->dynamic_relocations()[i];
+    //         LIEF::ELF::Relocation out_reloc = src_reloc;
+    //         if (src_reloc.type() ==
+    //                 static_cast<uint32_t>(
+    //                     shade_so::RelocType::R_X86_64_DTPMOD64) ||
+    //             src_reloc.type() ==
+    //                 static_cast<uint32_t>(
+    //                     shade_so::RelocType::R_X86_64_DTPOFF64)) {
+    //             if (src_reloc.has_symbol()) {
+    //                 const auto& src_sym = src_reloc.symbol();
+    //                 // TODO(junbin.rjb)
+    //                 // 注意是加到 dynamic symbol 里去了还是加到 static symbol
+    //                 // 里去了
+    //                 if (out->has_symbol(src_sym.name())) {
+    //                     out_reloc.symbol(dynamic_cast<LIEF::ELF::Symbol*>(
+    //                         &out->get_symbol(src_sym.name())));
+    //                 } else {
+    //                     auto& out_sym = out->add_dynamic_symbol(src_sym);
+    //                     out_reloc.symbol(&out_sym);
+    //                 }
+    //             }
+    //             out_reloc.address(out->get_section(".got").virtual_address() +
+    //                               dst->get_section(".got").size() +
+    //                               (src_reloc.address() -
+    //                                src->get_section(".got").virtual_address()));
+    //             // out->add_dynamic_relocation(out_reloc);
+    //         }
+    //     }
+    // }
 
     {
         LIEF::ELF::DynamicEntryArray* arr =

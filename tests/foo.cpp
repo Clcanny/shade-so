@@ -8,6 +8,7 @@ const char* s1 = "s1";
 const std::string s2 = "s2";
 static std::string s3 = "s3";
 // thread_local const char* s4 = "s4";
+// thread_local const char* s5 = nullptr;
 // static thread_local std::string s4 = "s4";
 void foo() {
     bar();
