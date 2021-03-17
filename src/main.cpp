@@ -49,8 +49,9 @@ int main() {
                                   // ".tdata",
                                   // ".tbss",
                                   ".init_array"}) {
-        shade_so::ExtendSection(
-            out.get(), sec_name, src->get_section(sec_name).size())();
+        // shade_so::ExtendSection(
+        //     out.get(), sec_name, src->get_section(sec_name).size())();
+        shade_so::SecMallocMgr(*dst, *src, out.get(), sec_name, false).malloc_dependency();
     }
 
     do {

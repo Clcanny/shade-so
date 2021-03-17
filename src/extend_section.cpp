@@ -43,8 +43,10 @@ SecMallocMgr::SecMallocMgr(const LIEF::ELF::Binary& artifact,
                            const LIEF::ELF::Binary& dependency,
                            LIEF::ELF::Binary* fat,
                            const std::string& name,
+                           bool consider_alignment,
                            int max_alloc_times)
-    : artifact_(artifact), dependency_(dependency), fat_(fat), name_(name),
+    : artifact_(artifact), dependency_(dependency),          //
+      fat_(fat), name_(name), sec_align_(1), elf_align_(1),  //
       max_alloc_times_(max_alloc_times), size_(0), capacity_(0) {
     assert(fat_ != nullptr);
     if (fat->has_section(name_)) {
@@ -53,15 +55,16 @@ SecMallocMgr::SecMallocMgr(const LIEF::ELF::Binary& artifact,
     }
     assert(sec_ != nullptr);
 
-    sec_align_ = 1;
-    elf_align_ = 1;
-    for (const auto& bin : std::array<const LIEF::ELF::Binary*, 3>{
-             &artifact_, &dependency_, fat_}) {
-        sec_align_ = std::lcm(
-            sec_align_,
-            bin->has_section(name_) ? bin->get_section(name_).alignment() : 1);
-        for (const auto& sec : bin->sections()) {
-            elf_align_ = std::lcm(elf_align_, sec.alignment());
+    if (consider_alignment) {
+        for (const auto& bin : std::array<const LIEF::ELF::Binary*, 3>{
+                 &artifact_, &dependency_, fat_}) {
+            sec_align_ = std::lcm(sec_align_,
+                                  bin->has_section(name_)
+                                      ? bin->get_section(name_).alignment()
+                                      : 1);
+            for (const auto& sec : bin->sections()) {
+                elf_align_ = std::lcm(elf_align_, sec.alignment());
+            }
         }
     }
 
@@ -89,8 +92,8 @@ int64_t SecMallocMgr::malloc(int64_t size) {
     return start;
 }
 
-int64_t SecMallocMgr::malloc_artifact() {
-    return malloc(artifact_.get_section(name_).size());
+int64_t SecMallocMgr::malloc_dependency() {
+    return malloc(dependency_.get_section(name_).size());
 }
 
 int64_t SecMallocMgr::latest_block_sa() const {

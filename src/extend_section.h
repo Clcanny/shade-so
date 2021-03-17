@@ -39,9 +39,10 @@ class SecMallocMgr {
                  const LIEF::ELF::Binary& dependency,
                  LIEF::ELF::Binary* fat,
                  const std::string& name,
+                 bool consider_alignment = true,
                  int max_alloc_times = 1);
     int64_t malloc(int64_t size);
-    int64_t malloc_artifact();
+    int64_t malloc_dependency();
     int64_t latest_block_sa() const;
 
  private:
