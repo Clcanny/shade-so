@@ -23,7 +23,7 @@ void HandleInitFiniOp::extend() {
     init_off_ =
         args_.sec_malloc_mgr_->get_or_create(".init", 0x90).malloc_dependency();
     init_array_off_ = args_.sec_malloc_mgr_->get_or_create(".init_array", 0)
-                          .malloc_dependency(0, MallocUnit::kEntry);
+                          .malloc_dependency();
     fini_off_ =
         args_.sec_malloc_mgr_->get_or_create(".fini", 0x90).malloc_dependency();
     fini_array_off_ = args_.sec_malloc_mgr_->get_or_create(".fini_array", 0)
@@ -37,19 +37,25 @@ void HandleInitFiniOp::merge() {
 }
 
 void HandleInitFiniOp::merge_init_array() {
-    LIEF::ELF::DynamicEntryArray* fat_init_arr =
-        args_.fat_->get(LIEF::ELF::DYNAMIC_TAGS::DT_INIT_ARRAY)
+    const LIEF::ELF::DynamicEntryArray* artifact_init_arr =
+        const_cast<LIEF::ELF::Binary*>(&args_.artifact_)
+            ->get(LIEF::ELF::DYNAMIC_TAGS::DT_INIT_ARRAY)
             .as<LIEF::ELF::DynamicEntryArray>();
     const LIEF::ELF::DynamicEntryArray* dep_init_arr =
         const_cast<LIEF::ELF::Binary*>(&args_.dependency_)
             ->get(LIEF::ELF::DYNAMIC_TAGS::DT_INIT_ARRAY)
             .as<LIEF::ELF::DynamicEntryArray>();
+    LIEF::ELF::DynamicEntryArray* fat_init_arr =
+        args_.fat_->get(LIEF::ELF::DYNAMIC_TAGS::DT_INIT_ARRAY)
+            .as<LIEF::ELF::DynamicEntryArray>();
 
-    // const auto& fat_init_sec = args_.fat_->get_section(sec_names::kInit);
-    // fat_init_arr->append(
-    //     fat_init_sec.virtual_address() +
-    //     args_.sec_malloc_mgr_->get(sec_names::kInit).exact_one_block_offset());
+    assert(fat_init_arr->size() == artifact_init_arr->size());
+    fat_init_arr->array().clear();
 
+    const auto& fat_init_sec = args_.fat_->get_section(sec_names::kInit);
+    fat_init_arr->append(
+        fat_init_sec.virtual_address() +
+        args_.sec_malloc_mgr_->get(sec_names::kInit).exact_one_block_offset());
     for (uint64_t dep_init_func : dep_init_arr->array()) {
         const auto& dep_to_sec =
             args_.dependency_.section_from_virtual_address(dep_init_func);
@@ -60,6 +66,20 @@ void HandleInitFiniOp::merge_init_array() {
                                 (dep_init_func - dep_to_sec.virtual_address());
         fat_init_arr->append(fat_init_func);
     }
+
+    // TODO(junbin.rjb)
+    // Test frame_dummy code.
+    // Don't call frame_dummy twice.
+    // for (uint64_t artifact_init_func : artifact_init_arr->array()) {
+    //     const auto& artifact_to_sec =
+    //         args_.artifact_.section_from_virtual_address(artifact_init_func);
+    //     const auto& fat_to_sec =
+    //         args_.fat_->get_section(artifact_to_sec.name());
+    //     int64_t fat_init_func =
+    //         fat_to_sec.virtual_address() +
+    //         (artifact_init_func - artifact_to_sec.virtual_address());
+    //     fat_init_arr->append(fat_init_func);
+    // }
 }
 
 }  // namespace shade_so
