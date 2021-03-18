@@ -80,7 +80,20 @@ SecMalloc::SecMalloc(const LIEF::ELF::Binary& artifact,
     capacity_ = size_;
 }
 
-int64_t SecMalloc::malloc(int64_t size) {
+int64_t SecMalloc::malloc(int64_t size, MallocUnit unit) {
+    switch (unit) {
+    case MallocUnit::kByte:
+        break;
+    case MallocUnit::kEntry:
+        assert(sec_->entry_size() > 0);
+        assert(dependency_.get_section(name_).entry_size() ==
+               sec_->entry_size());
+        size *= sec_->entry_size();
+        break;
+    default:
+        assert(false);
+    }
+
     assert(blocks_.size() < max_malloc_times_);
     size = std::ceil(size * 1.0 / sec_align_) * sec_align_;
     assert(size_ <= capacity_);
@@ -117,7 +130,7 @@ int64_t SecMalloc::malloc_dependency(int64_t addition, MallocUnit unit) {
     default:
         assert(false);
     }
-    return malloc(sec.size() + addition);
+    return malloc(sec.size() + addition, MallocUnit::kByte);
 }
 
 int64_t SecMalloc::latest_block_offset() const {

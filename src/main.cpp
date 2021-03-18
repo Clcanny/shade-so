@@ -14,6 +14,7 @@
 // #include "spdlog/spdlog.h"
 #include "src/elf.h"
 #include "src/extend_section.h"
+#include "src/handle_global_data_op.h"
 #include "src/handle_init_fini_op.h"
 #include "src/handle_lazy_symbol_binding.h"
 #include "src/handle_strict_symbol_binding.h"
@@ -90,7 +91,6 @@ int main() {
     } while (false);
 
     shade_so::MergeSection(src.get(), dst.get(), out.get(), ".rodata", 0)();
-    // shade_so::MergeSection(src.get(), dst.get(), out.get(), ".init", 0x90)();
     // shade_so::MergeSection(
     //     src.get(), dst.get(), out.get(), ".init_array", 0x0)();
     // shade_so::MergeSection(src.get(), dst.get(), out.get(), ".tdata", 0x0)();
@@ -135,43 +135,8 @@ int main() {
 
     handle_init_fini_op.merge();
 
-    for (auto i = 0; i < src->relocations().size(); i++) {
-        const auto& src_reloc = src->relocations()[i];
-        if (src_reloc.type() !=
-            static_cast<uint32_t>(shade_so::RelocType::R_X86_64_RELATIVE)) {
-            continue;
-        }
-        // if (src_reloc.address() != 0x4040) {
-        //     continue;
-        // }
-        const LIEF::ELF::Section& src_sec =
-            src->section_from_virtual_address(src_reloc.address());
-        const LIEF::ELF::Section& dst_sec = dst->get_section(src_sec.name());
-        const LIEF::ELF::Section& out_sec = out->get_section(src_sec.name());
-        // auto out_sec_id =
-        //     std::find_if(out->sections().begin(),
-        //                  out->sections().end(),
-        //                  [&out_sec](const LIEF::ELF::Section& sec) {
-        //                      return sec == out_sec;
-        //                  }) -
-        //     out->sections().begin();
-        // assert(src_reloc.value() == 0);
-
-        const LIEF::ELF::Section& src_to_sec =
-            src->section_from_virtual_address(src_reloc.addend());
-        const LIEF::ELF::Section& dst_to_sec =
-            dst->get_section(src_to_sec.name());
-        const LIEF::ELF::Section& out_to_sec =
-            out->get_section(src_to_sec.name());
-
-        out->add_dynamic_relocation(LIEF::ELF::Relocation(
-            out_sec.virtual_address() + dst_sec.size() +
-                (src_reloc.address() - src_sec.virtual_address()),
-            src_reloc.type(),
-            out_to_sec.virtual_address() + dst_to_sec.size() +
-                (src_reloc.addend() - src_to_sec.virtual_address()),
-            src_reloc.is_rela()));
-    }
+    shade_so::HandleGlobalDataOp handle_global_data_op(args);
+    handle_global_data_op.merge();
 
     shade_so::PatchRipInsts(src.get(), dst.get(), out.get())();
 

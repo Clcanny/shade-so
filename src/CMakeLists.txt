@@ -13,6 +13,7 @@ add_executable (merge.out
     handle_strict_symbol_binding.cpp
     operator.cpp
     handle_init_fini_op.cpp
+    handle_global_data_op.cpp
 )
 target_include_directories (merge.out PRIVATE
     ${PROJECT_SOURCE_DIR}

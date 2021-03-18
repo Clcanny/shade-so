@@ -10,6 +10,8 @@
 #include <array>
 #include <cassert>
 
+#include <LIEF/ELF.hpp>
+
 #include "src/const.h"
 
 namespace shade_so {

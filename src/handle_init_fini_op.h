@@ -10,8 +10,6 @@
 
 #include <cstdint>
 
-#include <LIEF/ELF.hpp>
-
 #include "src/operator.h"
 
 namespace shade_so {

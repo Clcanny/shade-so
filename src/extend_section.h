@@ -49,7 +49,7 @@ class SecMalloc {
     SecMalloc& operator=(const SecMalloc& other) = delete;
     SecMalloc& operator=(SecMalloc&& other) = delete;
 
-    int64_t malloc(int64_t size);
+    int64_t malloc(int64_t size, MallocUnit unit = MallocUnit::kByte);
     int64_t malloc_dependency(int64_t addition = 0,
                               MallocUnit unit = MallocUnit::kByte);
     int64_t latest_block_offset() const;
