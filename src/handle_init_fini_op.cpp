@@ -45,10 +45,10 @@ void HandleInitFiniOp::merge_init_array() {
             ->get(LIEF::ELF::DYNAMIC_TAGS::DT_INIT_ARRAY)
             .as<LIEF::ELF::DynamicEntryArray>();
 
-    const auto& fat_init_sec = args_.fat_->get_section(sec_names::kInit);
-    fat_init_arr->append(
-        fat_init_sec.virtual_address() +
-        args_.sec_malloc_mgr_->get(sec_names::kInit).exact_one_block_offset());
+    // const auto& fat_init_sec = args_.fat_->get_section(sec_names::kInit);
+    // fat_init_arr->append(
+    //     fat_init_sec.virtual_address() +
+    //     args_.sec_malloc_mgr_->get(sec_names::kInit).exact_one_block_offset());
 
     for (uint64_t dep_init_func : dep_init_arr->array()) {
         const auto& dep_to_sec =
