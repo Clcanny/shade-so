@@ -47,6 +47,7 @@ class SecMalloc {
     int64_t malloc_dependency(int64_t addition = 0,
                               MallocUnit unit = MallocUnit::kByte);
     int64_t latest_block_offset() const;
+    int64_t exact_one_block_offset() const;
 
  private:
     const LIEF::ELF::Binary& artifact_;
@@ -71,6 +72,7 @@ class SecMallocMgr {
     SecMallocMgr(const LIEF::ELF::Binary& artifact,
                  const LIEF::ELF::Binary& dependency,
                  LIEF::ELF::Binary* fat);
+    SecMalloc& get(const std::string& name);
     SecMalloc& get_or_create(const std::string& name, int max_malloc_times = 1);
 
  private:

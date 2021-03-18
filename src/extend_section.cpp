@@ -112,11 +112,22 @@ int64_t SecMalloc::latest_block_offset() const {
     return blocks_.rbegin()->first;
 }
 
+int64_t SecMalloc::exact_one_block_offset() const {
+    assert(blocks_.size() == 1);
+    return blocks_.begin()->first;
+}
+
 SecMallocMgr::SecMallocMgr(const LIEF::ELF::Binary& artifact,
                            const LIEF::ELF::Binary& dependency,
                            LIEF::ELF::Binary* fat)
     : artifact_(artifact), dependency_(dependency), fat_(fat) {
     assert(fat_);
+}
+
+SecMalloc& SecMallocMgr::get(const std::string& name) {
+    auto it = sec_mallocs_.find(name);
+    assert(it != sec_mallocs_.end());
+    return it->second;
 }
 
 SecMalloc& SecMallocMgr::get_or_create(const std::string& name,

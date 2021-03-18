@@ -23,6 +23,9 @@ class HandleInitFiniOp : public Operator {
     void merge() override;
 
  private:
+    void merge_init_array();
+
+ private:
     OperatorArgs args_;
     int64_t init_off_;
     int64_t init_array_off_;

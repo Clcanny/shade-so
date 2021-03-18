@@ -8,12 +8,16 @@
 #include "src/const.h"
 
 namespace shade_so {
-namespace section_names {
+namespace sec_names {
 
 const char* kPlt = ".plt";
 const char* kGotPlt = ".got.plt";
 const char* kRelPlt = ".rel.plt";
 const char* kRelaPlt = ".rela.plt";
+const char* kInit = ".init";
+const char* kInitArray = ".init_array";
+const char* kFini = ".fini";
+const char* kFiniArray = ".fini_array";
 
-}  // namespace section_names
+}  // namespace sec_names
 }  // namespace shade_so

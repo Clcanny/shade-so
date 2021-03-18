@@ -13,10 +13,10 @@ namespace shade_so {
 
 ValidateFormat::ValidateFormat(LIEF::ELF::Binary* bin)
     : bin_(bin),
-      expected_sections_({std::make_tuple(section_names::kPlt, 0x10),
-                          std::make_tuple(section_names::kGotPlt, 0x8),
-                          std::make_tuple(section_names::kRelaPlt, 0x18)}),
-      not_expected_sections({section_names::kRelPlt}) {
+      expected_sections_({std::make_tuple(sec_names::kPlt, 0x10),
+                          std::make_tuple(sec_names::kGotPlt, 0x8),
+                          std::make_tuple(sec_names::kRelaPlt, 0x18)}),
+      not_expected_sections({sec_names::kRelPlt}) {
 }
 
 bool ValidateFormat::operator()() const {

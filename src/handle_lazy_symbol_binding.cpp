@@ -73,7 +73,7 @@ uint64_t HandleLazySymbolBinding::operator()() {
 }
 
 void HandleLazySymbolBinding::extend(uint64_t entries_num) {
-    namespace names = section_names;
+    namespace names = sec_names;
 
     const Section& plt = out_->get_section(".plt");
 
@@ -101,9 +101,9 @@ void HandleLazySymbolBinding::handle_plt_entry_inst<0>(
            operand.mem.base == ZYDIS_REGISTER_RIP &&
            operand.mem.disp.has_displacement);
 
-    const Section& out_plt_sec = out_->get_section(section_names::kPlt);
-    const Section& dst_got_plt_sec = dst_->get_section(section_names::kGotPlt);
-    const Section& out_got_plt_sec = out_->get_section(section_names::kGotPlt);
+    const Section& out_plt_sec = out_->get_section(sec_names::kPlt);
+    const Section& dst_got_plt_sec = dst_->get_section(sec_names::kGotPlt);
+    const Section& out_got_plt_sec = out_->get_section(sec_names::kGotPlt);
     uint64_t cur_va = out_plt_sec.virtual_address() + offset;
     uint64_t rip = cur_va + inst.length;
     uint64_t addend = out_got_plt_sec.virtual_address() +
@@ -140,10 +140,9 @@ void HandleLazySymbolBinding::handle_plt_entry_inst<1>(
            operand.imm.is_signed == ZYAN_TRUE &&
            operand.imm.is_relative == ZYAN_FALSE);
 
-    const Section& out_plt_sec = out_->get_section(section_names::kPlt);
-    const Section& out_got_plt_sec = out_->get_section(section_names::kGotPlt);
-    const Section& out_rela_plt_sec =
-        out_->get_section(section_names::kRelaPlt);
+    const Section& out_plt_sec = out_->get_section(sec_names::kPlt);
+    const Section& out_got_plt_sec = out_->get_section(sec_names::kGotPlt);
+    const Section& out_rela_plt_sec = out_->get_section(sec_names::kRelaPlt);
     assert(entry_id < src_->pltgot_relocations().size());
     const Relocation& src_reloc = src_->pltgot_relocations()[entry_id];
     Relocation out_reloc = src_reloc;
@@ -183,8 +182,7 @@ void HandleLazySymbolBinding::handle_plt_entry_inst<2>(
     assert(operand.type == ZYDIS_OPERAND_TYPE_IMMEDIATE &&
            operand.imm.is_signed == 1 && operand.imm.is_relative == 1);
 
-    uint64_t out_plt_va =
-        out_->get_section(section_names::kPlt).virtual_address();
+    uint64_t out_plt_va = out_->get_section(sec_names::kPlt).virtual_address();
     int64_t value = -1 * (offset + inst.length);
     std::vector<uint8_t> bytes_to_be_patched;
     for (auto i = 0; i < inst.raw.imm[0].size / 8; i++) {
@@ -192,16 +190,16 @@ void HandleLazySymbolBinding::handle_plt_entry_inst<2>(
     }
     assert(out_plt_va + offset + inst.raw.imm[0].offset +
                bytes_to_be_patched.size() <=
-           out_plt_va + out_->get_section(section_names::kPlt).size());
+           out_plt_va + out_->get_section(sec_names::kPlt).size());
     out_->patch_address(out_plt_va + offset + inst.raw.imm[0].offset,
                         bytes_to_be_patched);
 }
 
 void HandleLazySymbolBinding::fill(uint64_t entries_num) {
-    const Section& src_plt = src_->get_section(section_names::kPlt);
+    const Section& src_plt = src_->get_section(sec_names::kPlt);
     std::vector<uint8_t> src_plt_content = src_plt.content();
-    const Section& dst_plt = dst_->get_section(section_names::kPlt);
-    const Section& out_plt = out_->get_section(section_names::kPlt);
+    const Section& dst_plt = dst_->get_section(sec_names::kPlt);
+    const Section& out_plt = out_->get_section(sec_names::kPlt);
     auto plt_entry_size = src_plt.entry_size();
     assert(plt_entry_size == dst_plt.entry_size());
     assert(plt_entry_size == out_plt.entry_size());

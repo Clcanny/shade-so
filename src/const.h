@@ -9,14 +9,18 @@
 #define SRC_CONST_H_
 
 namespace shade_so {
-namespace section_names {
+namespace sec_names {
 
 extern const char* kPlt;
 extern const char* kGotPlt;
 extern const char* kRelPlt;
 extern const char* kRelaPlt;
+extern const char* kInit;
+extern const char* kInitArray;
+extern const char* kFini;
+extern const char* kFiniArray;
 
-}  // namespace section_names
+}  // namespace sec_names
 }  // namespace shade_so
 
 #endif  // SRC_CONST_H_
