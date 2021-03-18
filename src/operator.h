@@ -8,6 +8,9 @@
 #ifndef SRC_OPERATOR_H_
 #define SRC_OPERATOR_H_
 
+#include <cstdint>
+#include <string>
+
 #include <LIEF/ELF.hpp>
 
 #include "src/extend_section.h"
@@ -30,13 +33,15 @@ class OperatorArgs {
 
 class Operator {
  public:
-    explicit Operator(OperatorArgs args);
     virtual void extend();
     virtual void merge();
     virtual void patch();
 
  protected:
-    OperatorArgs args_;
+    void merge_section(const LIEF::ELF::Binary& dependency,
+                       LIEF::ELF::Binary* fat,
+                       const std::string& name,
+                       int64_t offset);
 };
 
 }  // namespace shade_so

@@ -92,11 +92,22 @@ int64_t SecMalloc::malloc(int64_t size) {
     return start;
 }
 
-int64_t SecMalloc::malloc_dependency() {
-    return malloc(dependency_.get_section(name_).size());
+int64_t SecMalloc::malloc_dependency(int64_t addition, MallocUnit unit) {
+    const auto& sec = dependency_.get_section(name_);
+    switch (unit) {
+    case MallocUnit::kByte:
+        break;
+    case MallocUnit::kEntry:
+        assert(sec.entry_size() > 0);
+        addition *= sec.entry_size();
+        break;
+    default:
+        assert(false);
+    }
+    return malloc(sec.size() + addition);
 }
 
-int64_t SecMalloc::latest_block_sa() const {
+int64_t SecMalloc::latest_block_offset() const {
     assert(blocks_.rbegin() != blocks_.rend());
     return blocks_.rbegin()->first;
 }

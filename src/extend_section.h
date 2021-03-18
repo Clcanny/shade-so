@@ -33,6 +33,8 @@ class ExtendSection {
     uint64_t size_;
 };
 
+enum class MallocUnit { kByte, kEntry };
+
 class SecMalloc {
  public:
     SecMalloc(const LIEF::ELF::Binary& artifact,
@@ -42,8 +44,9 @@ class SecMalloc {
               bool consider_alignment = true,
               int max_malloc_times = 1);
     int64_t malloc(int64_t size);
-    int64_t malloc_dependency();
-    int64_t latest_block_sa() const;
+    int64_t malloc_dependency(int64_t addition = 0,
+                              MallocUnit unit = MallocUnit::kByte);
+    int64_t latest_block_offset() const;
 
  private:
     const LIEF::ELF::Binary& artifact_;

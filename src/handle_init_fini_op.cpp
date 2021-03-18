@@ -7,22 +7,30 @@
 
 #include "src/handle_init_fini_op.h"
 
-#include <cassert>
 #include <array>
+#include <cassert>
 
 namespace shade_so {
 
-HandleInitFiniOp::HandleInitFiniOp(
-    const LIEF::ELF::Binary& dependency,
-    LIEF::ELF::Binary* fat,
-    std::map<std::string, SecMallocMgr>* sec_malloc_mgrs)
-    : dependency_(dependency), fat_(fat), sec_malloc_mgrs_(sec_malloc_mgrs) {
-    assert(fat_ != nullptr);
-    assert(sec_malloc_mgrs_ != nullptr);
+HandleInitFiniOp::HandleInitFiniOp(OperatorArgs args)
+    : args_(args), init_off_(0), init_array_off_(0), fini_off_(0),
+      fini_array_off_(0) {
 }
 
 void HandleInitFiniOp::extend() {
-    auto []sec_malloc_mgrs->emplace(".init", SecMallocMgr(".init"));
+    init_off_ =
+        args_.sec_malloc_mgr_->get_or_create(".init", 1).malloc_dependency();
+    init_array_off_ = args_.sec_malloc_mgr_->get_or_create(".init_array", 1)
+                          .malloc_dependency(1, MallocUnit::kEntry);
+    fini_off_ =
+        args_.sec_malloc_mgr_->get_or_create(".fini", 1).malloc_dependency();
+    fini_array_off_ = args_.sec_malloc_mgr_->get_or_create(".fini_array", 1)
+                          .malloc_dependency(1, MallocUnit::kEntry);
+}
+
+void HandleInitFiniOp::merge() {
+    merge_section(args_.dependency_, args_.fat_, ".init", init_off_);
+    merge_section(args_.dependency_, args_.fat_, ".fini", fini_off_);
 }
 
 }  // namespace shade_so

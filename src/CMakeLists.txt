@@ -12,6 +12,7 @@ add_executable (merge.out
     relocate_jump_slot_entry.cpp
     handle_strict_symbol_binding.cpp
     operator.cpp
+    handle_init_fini_op.cpp
 )
 target_include_directories (merge.out PRIVATE
     ${PROJECT_SOURCE_DIR}

@@ -8,25 +8,26 @@
 #ifndef SRC_HANDLE_INIT_FINI_OP_H_
 #define SRC_HANDLE_INIT_FINI_OP_H_
 
-#include <map>
-#include <string>
+#include <cstdint>
 
 #include <LIEF/ELF.hpp>
 
-#include "src/extend_section.h"
 #include "src/operator.h"
 
 namespace shade_so {
 
 class HandleInitFiniOp : public Operator {
  public:
-    HandleInitFiniOp(const LIEF::ELF::Binary& dependency,
-                     LIEF::ELF::Binary* fat,
-                     std::map<std::string, SecMallocMgr>* sec_malloc_mgrs);
+    explicit HandleInitFiniOp(OperatorArgs args);
     void extend() override;
+    void merge() override;
 
  private:
-    std::map<std::string, SecMallocMgr> sec_malloc_mgrs_;
+    OperatorArgs args_;
+    int64_t init_off_;
+    int64_t init_array_off_;
+    int64_t fini_off_;
+    int64_t fini_array_off_;
 };
 
 }  // namespace shade_so
