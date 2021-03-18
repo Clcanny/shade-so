@@ -58,12 +58,16 @@ SecMalloc::SecMalloc(const LIEF::ELF::Binary& artifact,
     if (consider_alignment) {
         for (const auto& bin : std::array<const LIEF::ELF::Binary*, 3>{
                  &artifact_, &dependency_, fat_}) {
-            sec_align_ = std::lcm(sec_align_,
-                                  bin->has_section(name_)
-                                      ? bin->get_section(name_).alignment()
-                                      : 1);
+            auto align = bin->has_section(name_)
+                             ? bin->get_section(name_).alignment()
+                             : 1;
+            if (align <= 0) {
+                align = 1;
+            }
+            sec_align_ = std::lcm(sec_align_, align);
             for (const auto& sec : bin->sections()) {
-                elf_align_ = std::lcm(elf_align_, sec.alignment());
+                elf_align_ = std::lcm(
+                    elf_align_, sec.alignment() > 0 ? sec.alignment() : 1);
             }
         }
     }
@@ -124,6 +128,10 @@ SecMallocMgr::SecMallocMgr(const LIEF::ELF::Binary& artifact,
     assert(fat_);
 }
 
+std::map<std::string, SecMalloc>& SecMallocMgr::get() {
+    return sec_mallocs_;
+}
+
 SecMalloc& SecMallocMgr::get(const std::string& name) {
     auto it = sec_mallocs_.find(name);
     assert(it != sec_mallocs_.end());
@@ -131,6 +139,7 @@ SecMalloc& SecMallocMgr::get(const std::string& name) {
 }
 
 SecMalloc& SecMallocMgr::get_or_create(const std::string& name,
+                                       bool consider_alignment,
                                        int max_malloc_times) {
     auto it = sec_mallocs_.find(name);
     if (it != sec_mallocs_.end()) {
@@ -138,8 +147,12 @@ SecMalloc& SecMallocMgr::get_or_create(const std::string& name,
     }
     it = sec_mallocs_
              .emplace(name,
-                      SecMalloc(
-                          artifact_, dependency_, fat_, name, max_malloc_times))
+                      SecMalloc(artifact_,
+                                dependency_,
+                                fat_,
+                                name,
+                                consider_alignment,
+                                max_malloc_times))
              .first;
     return it->second;
 }

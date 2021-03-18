@@ -21,12 +21,12 @@ HandleInitFiniOp::HandleInitFiniOp(OperatorArgs args)
 
 void HandleInitFiniOp::extend() {
     init_off_ =
-        args_.sec_malloc_mgr_->get_or_create(".init", 1).malloc_dependency();
-    init_array_off_ = args_.sec_malloc_mgr_->get_or_create(".init_array", 1)
+        args_.sec_malloc_mgr_->get_or_create(".init").malloc_dependency();
+    init_array_off_ = args_.sec_malloc_mgr_->get_or_create(".init_array")
                           .malloc_dependency(1, MallocUnit::kEntry);
     fini_off_ =
-        args_.sec_malloc_mgr_->get_or_create(".fini", 1).malloc_dependency();
-    fini_array_off_ = args_.sec_malloc_mgr_->get_or_create(".fini_array", 1)
+        args_.sec_malloc_mgr_->get_or_create(".fini").malloc_dependency();
+    fini_array_off_ = args_.sec_malloc_mgr_->get_or_create(".fini_array")
                           .malloc_dependency(1, MallocUnit::kEntry);
 }
 

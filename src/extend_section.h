@@ -41,8 +41,8 @@ class SecMalloc {
               const LIEF::ELF::Binary& dependency,
               LIEF::ELF::Binary* fat,
               const std::string& name,
-              bool consider_alignment = true,
-              int max_malloc_times = 1);
+              bool consider_alignment,
+              int max_malloc_times);
     int64_t malloc(int64_t size);
     int64_t malloc_dependency(int64_t addition = 0,
                               MallocUnit unit = MallocUnit::kByte);
@@ -72,8 +72,11 @@ class SecMallocMgr {
     SecMallocMgr(const LIEF::ELF::Binary& artifact,
                  const LIEF::ELF::Binary& dependency,
                  LIEF::ELF::Binary* fat);
+    std::map<std::string, SecMalloc>& get();
     SecMalloc& get(const std::string& name);
-    SecMalloc& get_or_create(const std::string& name, int max_malloc_times = 1);
+    SecMalloc& get_or_create(const std::string& name,
+                             bool consider_alignment = false,
+                             int max_malloc_times = 1);
 
  private:
     const LIEF::ELF::Binary& artifact_;
