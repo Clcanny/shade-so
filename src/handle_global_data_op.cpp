@@ -17,12 +17,11 @@
 namespace shade_so {
 
 HandleGlobalDataOp::HandleGlobalDataOp(OperatorArgs args)
-    : args_(args), bss_off_(0), rodata_off_(0), data_off_(0) {
+    : args_(args), rodata_off_(0), data_off_(0) {
 }
 
 void HandleGlobalDataOp::extend() {
-    // bss_off_ =
-    //     args_.sec_malloc_mgr_->get_or_create(".bss", 0).malloc_dependency();
+    args_.sec_malloc_mgr_->get_or_create(".bss", 0).malloc_dependency();
     rodata_off_ =
         args_.sec_malloc_mgr_->get_or_create(".rodata", 0).malloc_dependency();
     data_off_ =
@@ -41,9 +40,8 @@ void HandleGlobalDataOp::extend() {
 }
 
 void HandleGlobalDataOp::merge() {
-    // merge_section(args_.dependency_, args_.fat_, ".bss", bss_off_);
     merge_section(args_.dependency_, args_.fat_, ".rodata", rodata_off_);
-    // merge_section(args_.dependency_, args_.fat_, ".data", data_off_);
+    merge_section(args_.dependency_, args_.fat_, ".data", data_off_);
     merge_relative_relocs();
 }
 
