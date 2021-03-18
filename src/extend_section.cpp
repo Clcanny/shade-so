@@ -10,7 +10,9 @@
 #include <array>
 #include <cassert>
 #include <cmath>
+#include <cstring>
 #include <numeric>
+#include <vector>
 
 namespace shade_so {
 
@@ -43,11 +45,13 @@ SecMalloc::SecMalloc(const LIEF::ELF::Binary& artifact,
                      const LIEF::ELF::Binary& dependency,
                      LIEF::ELF::Binary* fat,
                      const std::string& name,
+                     uint8_t empty_val,
                      bool consider_alignment,
                      int max_malloc_times)
-    : artifact_(artifact), dependency_(dependency),          //
-      fat_(fat), name_(name), sec_align_(1), elf_align_(1),  //
-      max_malloc_times_(max_malloc_times), size_(0), capacity_(0) {
+    : artifact_(artifact), dependency_(dependency),                //
+      fat_(fat), name_(name), sec_align_(1), elf_align_(1),        //
+      empty_val_(empty_val), max_malloc_times_(max_malloc_times),  //
+      size_(0), capacity_(0) {
     assert(fat_ != nullptr);
     if (fat->has_section(name_)) {
         sec_ = &fat_->get_section(name_);
@@ -88,6 +92,10 @@ int64_t SecMalloc::malloc(int64_t size) {
         fat_->extend(*sec_, extend_size);
         capacity_ = size_ + extend_size;
         assert(capacity_ == sec_->size());
+        std::vector<uint8_t> content = sec_->content();
+        assert(content.size() == capacity_);
+        std::memset(content.data() + size_, empty_val_, extend_size);
+        sec_->content(content);
         assert(size_ + size <= capacity_);
     }
     auto start = size_;
@@ -140,6 +148,7 @@ SecMalloc& SecMallocMgr::get(const std::string& name) {
 }
 
 SecMalloc& SecMallocMgr::get_or_create(const std::string& name,
+                                       uint8_t empty_val_,
                                        bool consider_alignment,
                                        int max_malloc_times) {
     auto it = sec_mallocs_.find(name);
@@ -152,6 +161,7 @@ SecMalloc& SecMallocMgr::get_or_create(const std::string& name,
                                 dependency_,
                                 fat_,
                                 name,
+                                empty_val_,
                                 consider_alignment,
                                 max_malloc_times))
              .first;

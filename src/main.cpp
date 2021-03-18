@@ -56,7 +56,7 @@ int main() {
          }) {
         // shade_so::ExtendSection(
         //     out.get(), sec_name, src->get_section(sec_name).size())();
-        sec_malloc_mgr.get_or_create(sec_name);
+        sec_malloc_mgr.get_or_create(sec_name, 0x0);
     }
     for (auto& [_, sec_malloc] : sec_malloc_mgr.get()) {
         sec_malloc.malloc_dependency();

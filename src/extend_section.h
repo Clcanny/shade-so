@@ -41,6 +41,7 @@ class SecMalloc {
               const LIEF::ELF::Binary& dependency,
               LIEF::ELF::Binary* fat,
               const std::string& name,
+              uint8_t empty_val,
               bool consider_alignment,
               int max_malloc_times);
     SecMalloc(const SecMalloc& other) = delete;
@@ -64,6 +65,8 @@ class SecMalloc {
     int64_t sec_align_;
     int64_t elf_align_;
 
+    uint8_t empty_val_;
+
     // Start address to size.
     std::map<int64_t, int64_t> blocks_;
     int max_malloc_times_;
@@ -80,6 +83,7 @@ class SecMallocMgr {
     std::map<std::string, SecMalloc>& get();
     SecMalloc& get(const std::string& name);
     SecMalloc& get_or_create(const std::string& name,
+                             uint8_t empty_val_,
                              bool consider_alignment = false,
                              int max_malloc_times = 1);
 
