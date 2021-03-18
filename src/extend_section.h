@@ -43,6 +43,11 @@ class SecMalloc {
               const std::string& name,
               bool consider_alignment,
               int max_malloc_times);
+    SecMalloc(const SecMalloc& other) = delete;
+    SecMalloc(SecMalloc&& other) = default;
+    SecMalloc& operator=(const SecMalloc& other) = delete;
+    SecMalloc& operator=(SecMalloc&& other) = delete;
+
     int64_t malloc(int64_t size);
     int64_t malloc_dependency(int64_t addition = 0,
                               MallocUnit unit = MallocUnit::kByte);

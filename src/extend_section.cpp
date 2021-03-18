@@ -103,6 +103,7 @@ int64_t SecMalloc::malloc_dependency(int64_t addition, MallocUnit unit) {
         break;
     case MallocUnit::kEntry:
         assert(sec.entry_size() > 0);
+        assert(sec.entry_size() == fat_->get_section(name_).entry_size());
         addition *= sec.entry_size();
         break;
     default:

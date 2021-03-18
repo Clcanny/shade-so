@@ -20,14 +20,14 @@ HandleInitFiniOp::HandleInitFiniOp(OperatorArgs args)
 }
 
 void HandleInitFiniOp::extend() {
-    init_off_ =
-        args_.sec_malloc_mgr_->get_or_create(".init").malloc_dependency();
+    // init_off_ =
+    //     args_.sec_malloc_mgr_->get_or_create(".init").malloc_dependency();
     init_array_off_ = args_.sec_malloc_mgr_->get_or_create(".init_array")
-                          .malloc_dependency(1, MallocUnit::kEntry);
-    fini_off_ =
-        args_.sec_malloc_mgr_->get_or_create(".fini").malloc_dependency();
-    fini_array_off_ = args_.sec_malloc_mgr_->get_or_create(".fini_array")
-                          .malloc_dependency(1, MallocUnit::kEntry);
+                          .malloc_dependency(0, MallocUnit::kEntry);
+    // fini_off_ =
+    //     args_.sec_malloc_mgr_->get_or_create(".fini").malloc_dependency();
+    // fini_array_off_ = args_.sec_malloc_mgr_->get_or_create(".fini_array")
+    //                       .malloc_dependency(1, MallocUnit::kEntry);
 }
 
 void HandleInitFiniOp::merge() {
