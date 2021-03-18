@@ -16,23 +16,34 @@
 
 namespace shade_so {
 
-HandleGlobalDataOp::HandleGlobalDataOp(OperatorArgs args) : args_(args) {
+HandleGlobalDataOp::HandleGlobalDataOp(OperatorArgs args)
+    : args_(args), bss_off_(0), rodata_off_(0), data_off_(0) {
 }
 
 void HandleGlobalDataOp::extend() {
-    auto dyn_relocs = args_.dependency_.dynamic_relocations();
-    auto n = std::count_if(
-        dyn_relocs.begin(),
-        dyn_relocs.end(),
-        [](const LIEF::ELF::Relocation& reloc) {
-            return reloc.type() == static_cast<uint32_t>(
-                                       shade_so::RelocType::R_X86_64_RELATIVE);
-        });
-    args_.sec_malloc_mgr_->get_or_create(".rela.plt", 0, false, 2)
-        .malloc(n, MallocUnit::kEntry);
+    // bss_off_ =
+    //     args_.sec_malloc_mgr_->get_or_create(".bss", 0).malloc_dependency();
+    rodata_off_ =
+        args_.sec_malloc_mgr_->get_or_create(".rodata", 0).malloc_dependency();
+    data_off_ =
+        args_.sec_malloc_mgr_->get_or_create(".data", 0).malloc_dependency();
+
+    // auto dyn_relocs = args_.dependency_.dynamic_relocations();
+    // auto n = std::count_if(
+    //     dyn_relocs.begin(),
+    //     dyn_relocs.end(),
+    //     [](const LIEF::ELF::Relocation& reloc) {
+    //         return reloc.type() == static_cast<uint32_t>(
+    //                                    shade_so::RelocType::R_X86_64_RELATIVE);
+    //     });
+    // args_.sec_malloc_mgr_->get_or_create(".rela.plt", 0, false, 2)
+    //     .malloc(n, MallocUnit::kEntry);
 }
 
 void HandleGlobalDataOp::merge() {
+    // merge_section(args_.dependency_, args_.fat_, ".bss", bss_off_);
+    merge_section(args_.dependency_, args_.fat_, ".rodata", rodata_off_);
+    // merge_section(args_.dependency_, args_.fat_, ".data", data_off_);
     merge_relative_relocs();
 }
 

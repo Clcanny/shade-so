@@ -47,10 +47,10 @@ int main() {
              ".plt",
              ".got.plt",
              ".rela.plt",
-             ".dynstr",
-             ".rodata",
+             ".dynstr"
+             // ".rodata",
              // ".init_array",
-             ".data"
+             // ".data"
              // ".init",
              // ".tdata",
              // ".tbss",
@@ -65,6 +65,8 @@ int main() {
     shade_so::OperatorArgs args(*dst, *src, out.get(), &sec_malloc_mgr);
     shade_so::HandleInitFiniOp handle_init_fini_op(args);
     handle_init_fini_op.extend();
+    shade_so::HandleGlobalDataOp handle_global_data_op(args);
+    handle_global_data_op.extend();
 
     do {
         // if (!src->has(LIEF::ELF::SEGMENT_TYPES::PT_TLS)) {
@@ -90,7 +92,7 @@ int main() {
         // }
     } while (false);
 
-    shade_so::MergeSection(src.get(), dst.get(), out.get(), ".rodata", 0)();
+    // shade_so::MergeSection(src.get(), dst.get(), out.get(), ".rodata", 0)();
     // shade_so::MergeSection(
     //     src.get(), dst.get(), out.get(), ".init_array", 0x0)();
     // shade_so::MergeSection(src.get(), dst.get(), out.get(), ".tdata", 0x0)();
@@ -135,7 +137,6 @@ int main() {
 
     handle_init_fini_op.merge();
 
-    shade_so::HandleGlobalDataOp handle_global_data_op(args);
     handle_global_data_op.merge();
 
     shade_so::PatchRipInsts(src.get(), dst.get(), out.get())();

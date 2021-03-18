@@ -8,6 +8,8 @@
 #ifndef SRC_HANDLE_GLOBAL_DATA_OP_H_
 #define SRC_HANDLE_GLOBAL_DATA_OP_H_
 
+#include <cstdint>
+
 #include "src/operator.h"
 
 namespace shade_so {
@@ -23,6 +25,9 @@ class HandleGlobalDataOp : public Operator {
 
  private:
     OperatorArgs args_;
+    int64_t bss_off_;
+    int64_t data_off_;
+    int64_t rodata_off_;
 };
 
 }  // namespace shade_so
