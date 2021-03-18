@@ -32,7 +32,7 @@ int main() {
     std::unique_ptr<LIEF::ELF::Binary> out(
         LIEF::ELF::Parser::parse("main.out"));
 
-    std::map<std::string, shade_so::SecMallocMgr> sec_malloc_mgrs;
+    std::map<std::string, shade_so::SecMalloc> sec_malloc_mgrs;
     for (const std::string& sec_name :
          std::vector<std::string>{".plt.got",
                                   ".got",
@@ -55,7 +55,7 @@ int main() {
         //     out.get(), sec_name, src->get_section(sec_name).size())();
         sec_malloc_mgrs.emplace(
             sec_name,
-            shade_so::SecMallocMgr(*dst, *src, out.get(), sec_name, false));
+            shade_so::SecMalloc(*dst, *src, out.get(), sec_name, false));
     }
     for (auto [_, mgr] : sec_malloc_mgrs) {
         mgr.malloc_dependency();

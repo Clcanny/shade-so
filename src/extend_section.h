@@ -33,14 +33,14 @@ class ExtendSection {
     uint64_t size_;
 };
 
-class SecMallocMgr {
+class SecMalloc {
  public:
-    SecMallocMgr(const LIEF::ELF::Binary& artifact,
-                 const LIEF::ELF::Binary& dependency,
-                 LIEF::ELF::Binary* fat,
-                 const std::string& name,
-                 bool consider_alignment = true,
-                 int max_alloc_times = 1);
+    SecMalloc(const LIEF::ELF::Binary& artifact,
+              const LIEF::ELF::Binary& dependency,
+              LIEF::ELF::Binary* fat,
+              const std::string& name,
+              bool consider_alignment = true,
+              int max_malloc_times = 1);
     int64_t malloc(int64_t size);
     int64_t malloc_dependency();
     int64_t latest_block_sa() const;
@@ -57,10 +57,24 @@ class SecMallocMgr {
 
     // Start address to size.
     std::map<int64_t, int64_t> blocks_;
-    int max_alloc_times_;
+    int max_malloc_times_;
 
     int64_t size_;
     int64_t capacity_;
+};
+
+class SecMallocMgr {
+ public:
+    SecMallocMgr(const LIEF::ELF::Binary& artifact,
+                 const LIEF::ELF::Binary& dependency,
+                 LIEF::ELF::Binary* fat);
+    SecMalloc& get_or_create(const std::string& name, int max_malloc_times = 1);
+
+ private:
+    const LIEF::ELF::Binary& artifact_;
+    const LIEF::ELF::Binary& dependency_;
+    LIEF::ELF::Binary* fat_;
+    std::map<std::string, SecMalloc> sec_mallocs_;
 };
 
 }  // namespace shade_so

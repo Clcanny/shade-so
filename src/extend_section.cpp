@@ -39,15 +39,15 @@ void ExtendSection::ceil_size() {
     }
 }
 
-SecMallocMgr::SecMallocMgr(const LIEF::ELF::Binary& artifact,
-                           const LIEF::ELF::Binary& dependency,
-                           LIEF::ELF::Binary* fat,
-                           const std::string& name,
-                           bool consider_alignment,
-                           int max_alloc_times)
+SecMalloc::SecMalloc(const LIEF::ELF::Binary& artifact,
+                     const LIEF::ELF::Binary& dependency,
+                     LIEF::ELF::Binary* fat,
+                     const std::string& name,
+                     bool consider_alignment,
+                     int max_malloc_times)
     : artifact_(artifact), dependency_(dependency),          //
       fat_(fat), name_(name), sec_align_(1), elf_align_(1),  //
-      max_alloc_times_(max_alloc_times), size_(0), capacity_(0) {
+      max_malloc_times_(max_malloc_times), size_(0), capacity_(0) {
     assert(fat_ != nullptr);
     if (fat->has_section(name_)) {
         sec_ = &fat_->get_section(name_);
@@ -72,8 +72,8 @@ SecMallocMgr::SecMallocMgr(const LIEF::ELF::Binary& artifact,
     capacity_ = size_;
 }
 
-int64_t SecMallocMgr::malloc(int64_t size) {
-    assert(blocks_.size() < max_alloc_times_);
+int64_t SecMalloc::malloc(int64_t size) {
+    assert(blocks_.size() < max_malloc_times_);
     size = std::ceil(size * 1.0 / sec_align_) * sec_align_;
     assert(size_ <= capacity_);
     size_ = std::ceil(size_ * 1.0 / sec_align_) * sec_align_;
@@ -92,13 +92,34 @@ int64_t SecMallocMgr::malloc(int64_t size) {
     return start;
 }
 
-int64_t SecMallocMgr::malloc_dependency() {
+int64_t SecMalloc::malloc_dependency() {
     return malloc(dependency_.get_section(name_).size());
 }
 
-int64_t SecMallocMgr::latest_block_sa() const {
+int64_t SecMalloc::latest_block_sa() const {
     assert(blocks_.rbegin() != blocks_.rend());
     return blocks_.rbegin()->first;
+}
+
+SecMallocMgr::SecMallocMgr(const LIEF::ELF::Binary& artifact,
+                           const LIEF::ELF::Binary& dependency,
+                           LIEF::ELF::Binary* fat)
+    : artifact_(artifact), dependency_(dependency), fat_(fat) {
+    assert(fat_);
+}
+
+SecMalloc& SecMallocMgr::get_or_create(const std::string& name,
+                                       int max_malloc_times) {
+    auto it = sec_mallocs_.find(name);
+    if (it != sec_mallocs_.end()) {
+        return it->second;
+    }
+    it = sec_mallocs_
+             .emplace(name,
+                      SecMalloc(
+                          artifact_, dependency_, fat_, name, max_malloc_times))
+             .first;
+    return it->second;
 }
 
 }  // namespace shade_so
