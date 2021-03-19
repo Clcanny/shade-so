@@ -18,6 +18,7 @@ const char* kInit = ".init";
 const char* kInitArray = ".init_array";
 const char* kFini = ".fini";
 const char* kFiniArray = ".fini_array";
+const char* kData = ".data";
 
 }  // namespace sec_names
 }  // namespace shade_so

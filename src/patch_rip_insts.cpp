@@ -16,22 +16,14 @@
 #include <cstring>
 #include <functional>
 
-// #include "spdlog/spdlog.h"
+#include "src/const.h"
 
 namespace shade_so {
-namespace {
-
-// static auto kLogger = spdlog::rotating_logger_mt(
-//     "PatchRipInstsOp", "logs/shade_so.LOG", 5 * 1024 * 1024, 3);
-
-}  // namespace
 
 PatchRipInstsOp::PatchRipInstsOp(OperatorArgs args)
     : src_(const_cast<LIEF::ELF::Binary*>(&args.dependency_)),
-      dst_(const_cast<LIEF::ELF::Binary*>(&args.artifact_)), out_(args.fat_) {
-    assert(src_ != nullptr);
-    assert(dst_ != nullptr);
-    assert(out_ != nullptr);
+      dst_(const_cast<LIEF::ELF::Binary*>(&args.artifact_)), out_(args.fat_),
+      args_(args) {
     ZydisDecoderInit(
         &decoder_, ZYDIS_MACHINE_MODE_LONG_64, ZYDIS_ADDRESS_WIDTH_64);
     ZydisFormatterInit(&formatter_, ZYDIS_FORMATTER_STYLE_INTEL);
@@ -90,23 +82,19 @@ void PatchRipInstsOp::patch(
     const std::function<BriefValue(const ZydisDecodedInstruction&,
                                    const ZydisDecodedOperand&,
                                    int)>& extract) {
-    const Section& src_sec = src_->get_section(sec_name);
-    const Section& dst_sec = dst_->get_section(sec_name);
-    const Section& out_sec = out_->get_section(sec_name);
-    std::vector<uint8_t> out_content = out_sec.content();
-    assert(out_content.size() >= dst_sec.size());
-    // std::vector<uint8_t> dst_content = dst_sec.content();
-    // assert(std::memcmp(dst_content.data(),
-    //                    out_content.data(),
-    //                    dst_content.size()) == 0);
+    const auto& dep_sec = args_.dependency_.get_section(sec_name);
+    const auto& artifact_sec = args_.artifact_.get_section(sec_name);
+    const auto& fat_sec = args_.fat_->get_section(sec_name);
+    std::vector<uint8_t> fat_content = fat_sec.content();
+    assert(fat_content.size() >= artifact_sec.size());
 
     uint64_t offset = 0;
-    while (offset < out_content.size()) {
+    while (offset < fat_content.size()) {
         ZydisDecodedInstruction inst;
         assert(
             ZYAN_SUCCESS(ZydisDecoderDecodeBuffer(&decoder_,
-                                                  out_content.data() + offset,
-                                                  out_content.size() - offset,
+                                                  fat_content.data() + offset,
+                                                  fat_content.size() - offset,
                                                   &inst)));
         // (begin, end)
         auto begin = &inst.operands[0] - 1;
@@ -116,11 +104,10 @@ void PatchRipInstsOp::patch(
              operand_id++) {
             assert(operand_id < 2);
             const ZydisDecodedOperand& operand = *begin;
-
             BriefValue bv = extract(inst, operand, operand_id);
             int64_t value = 0;
             for (decltype(bv.size) i = 0; i < bv.size; i++) {
-                auto t = out_content[offset + bv.offset + i] * 1L;
+                auto t = fat_content[offset + bv.offset + i] * 1L;
                 value |= t << (8 * i);
             }
             switch (bv.size) {
@@ -140,74 +127,187 @@ void PatchRipInstsOp::patch(
             }
             assert(value == bv.value);
 
-            bool from_dst = offset < dst_sec.size();
-            const LIEF::ELF::Section& in_sec = from_dst ? dst_sec : src_sec;
-            LIEF::ELF::Binary* in_bin = from_dst ? dst_ : src_;
+            // bool from_dst = offset < artifact_sec.size();
+            // const LIEF::ELF::Section& in_sec =
+            //     from_dst ? artifact_sec : dep_sec;
+            // LIEF::ELF::Binary* in_bin = from_dst ? dst_ : src_;
 
-            uint64_t in_cur_va = in_sec.virtual_address() + offset -
-                                 (from_dst ? 0 : dst_sec.size());
-            uint64_t in_rip = in_cur_va + inst.length;
-            uint64_t in_jump_to = 0;
-            assert(ZYAN_SUCCESS(ZydisCalcAbsoluteAddress(
-                &inst, &operand, in_cur_va, &in_jump_to)));
-            assert(in_jump_to == in_rip + value);
+            // uint64_t in_cur_va = in_sec.virtual_address() + offset -
+            //                      (from_dst ? 0 : artifact_sec.size());
+            // uint64_t in_rip = in_cur_va + inst.length;
+            // uint64_t in_jump_to = 0;
+            // assert(ZYAN_SUCCESS(ZydisCalcAbsoluteAddress(
+            //     &inst, &operand, in_cur_va, &in_jump_to)));
+            // assert(in_jump_to == in_rip + value);
 
-            // __TMC_END__
-            if (!in_bin->has_section_with_va(in_jump_to)) {
-                continue;
-            }
-            assert(in_bin->has_section_with_va(in_jump_to));
-            const Section& in_to_sec = in_bin->get_section_with_va(in_jump_to);
-            const Section& dst_to_sec = dst_->get_section(in_to_sec.name());
-            const Section& out_to_sec = out_->get_section(in_to_sec.name());
-            uint64_t out_cur_va = out_sec.virtual_address() + offset;
-            uint64_t out_rip = out_cur_va + inst.length;
-            int64_t new_value = out_to_sec.virtual_address() +
-                                (from_dst ? 0 : dst_to_sec.size()) +
-                                (in_jump_to - in_to_sec.virtual_address()) -
-                                out_rip;
-            if (!from_dst && sec_name == ".plt") {
-                continue;
-            }
-            if (!from_dst) {
-                if (in_to_sec.name() == ".plt") {
-                    new_value -= 1 * in_to_sec.entry_size();
-                }
-            }
+            // // __TMC_END__
+            // if (!in_bin->has_section_with_va(in_jump_to)) {
+            //     continue;
+            // }
+            // assert(in_bin->has_section_with_va(in_jump_to));
+            // const Section& in_to_sec =
+            // in_bin->get_section_with_va(in_jump_to); const Section&
+            // dst_to_sec = dst_->get_section(in_to_sec.name()); const Section&
+            // out_to_sec = out_->get_section(in_to_sec.name()); uint64_t
+            // out_cur_va = fat_sec.virtual_address() + offset; uint64_t out_rip
+            // = out_cur_va + inst.length; int64_t new_value =
+            // out_to_sec.virtual_address() +
+            //                     (from_dst ? 0 : dst_to_sec.size()) +
+            //                     (in_jump_to - in_to_sec.virtual_address()) -
+            //                     out_rip;
+            // if (!from_dst && sec_name == ".plt") {
+            //     continue;
+            // }
+            // if (!from_dst) {
+            //     if (in_to_sec.name() == ".plt") {
+            //         new_value -= 1 * in_to_sec.entry_size();
+            //     }
+            // }
+            uint64_t new_value = cal_new_rip_arg(offset < artifact_sec.size(),
+                                                 sec_name,
+                                                 inst,
+                                                 operand,
+                                                 offset,
+                                                 value);
 
             std::vector<uint8_t> bytes_to_be_patched;
             for (std::size_t i = 0; i < bv.size; i++) {
                 bytes_to_be_patched.emplace_back((new_value >> (8 * i)) & 0xFF);
             }
-            out_->patch_address(out_cur_va + bv.offset, bytes_to_be_patched);
+            out_->patch_address(fat_sec.virtual_address() + offset + bv.offset,
+                                bytes_to_be_patched);
 
-            ZydisDecodedInstruction new_inst;
-            assert(ZYAN_SUCCESS(ZydisDecoderDecodeBuffer(
-                &decoder_,
-                out_->get_section(sec_name).content().data() + offset,
-                inst.length,
-                &new_inst)));
-            uint64_t new_out_jump_to = 0;
-            assert(ZYAN_SUCCESS(ZydisCalcAbsoluteAddress(
-                &new_inst,
-                &new_inst.operands[0] + (begin - &inst.operands[0]),
-                out_cur_va,
-                &new_out_jump_to)));
-            assert(new_out_jump_to - out_to_sec.virtual_address() -
-                       (from_dst ? 0 : dst_to_sec.size()) ==
-                   in_jump_to - in_to_sec.virtual_address() -
-                       ((!from_dst && in_to_sec.name() == ".plt")
-                            ? in_to_sec.entry_size()
-                            : 0));
-            // kLogger->info(
-            //     "Instruction at 0x{:x} changes from '{:s}' to '{:s}'.",
-            //     "Instruction at 0x{:x} changes from '{:s}' to '{:s}'.",
-            //     origin_buf,
-            //     new_buf);
+            // ZydisDecodedInstruction new_inst;
+            // assert(ZYAN_SUCCESS(ZydisDecoderDecodeBuffer(
+            //     &decoder_,
+            //     out_->get_section(sec_name).content().data() + offset,
+            //     inst.length,
+            //     &new_inst)));
+            // uint64_t new_out_jump_to = 0;
+            // assert(ZYAN_SUCCESS(ZydisCalcAbsoluteAddress(
+            //     &new_inst,
+            //     &new_inst.operands[0] + (begin - &inst.operands[0]),
+            //     out_cur_va,
+            //     &new_out_jump_to)));
+            // assert(new_out_jump_to - out_to_sec.virtual_address() -
+            //            (from_dst ? 0 : dst_to_sec.size()) ==
+            //        in_jump_to - in_to_sec.virtual_address() -
+            //            ((!from_dst && in_to_sec.name() == ".plt")
+            //                 ? in_to_sec.entry_size()
+            //                 : 0));
         }
         offset += inst.length;
     }
-    assert(offset == out_content.size());
+    assert(offset == fat_content.size());
+}
+
+template <>
+uint64_t PatchRipInstsOp::cal_new_rip_arg_internal<true>(
+    const std::string& sec_name,
+    const ZydisDecodedInstruction& inst,
+    const ZydisDecodedOperand& operand,
+    uint64_t inst_off,
+    uint64_t artifact_rip_arg) {
+    const auto& artifact_sec = args_.artifact_.get_section(sec_name);
+    const auto& fat_sec = args_.fat_->get_section(sec_name);
+
+    uint64_t artifact_cur_va = artifact_sec.virtual_address() + inst_off;
+    uint64_t artifact_rip = artifact_cur_va + inst.length;
+    uint64_t artifact_jump_to = 0;
+    assert(ZYAN_SUCCESS(ZydisCalcAbsoluteAddress(
+        &inst, &operand, artifact_cur_va, &artifact_jump_to)));
+    assert(artifact_jump_to == artifact_rip + artifact_rip_arg);
+
+    const LIEF::ELF::Section* artifact_to_sec =
+        sec_from_va(args_.artifact_, artifact_jump_to);
+    if (artifact_to_sec == nullptr) {
+        return artifact_rip_arg;
+    }
+    const auto& fat_to_sec = args_.fat_->get_section(artifact_to_sec->name());
+
+    uint64_t fat_cur_va = fat_sec.virtual_address() + inst_off;
+    uint64_t fat_rip = fat_cur_va + inst.length;
+    uint64_t fat_rip_arg =
+        fat_to_sec.virtual_address() +
+        (artifact_jump_to - artifact_to_sec->virtual_address()) - fat_rip;
+    return fat_rip_arg;
+}
+
+template <>
+uint64_t PatchRipInstsOp::cal_new_rip_arg_internal<false>(
+    const std::string& sec_name,
+    const ZydisDecodedInstruction& inst,
+    const ZydisDecodedOperand& operand,
+    uint64_t inst_off,
+    uint64_t dep_rip_arg) {
+    if (sec_name == sec_names::kPlt) {
+        return dep_rip_arg;
+    }
+    const auto& dep_sec = args_.dependency_.get_section(sec_name);
+    const auto& fat_sec = args_.fat_->get_section(sec_name);
+
+    uint64_t dep_cur_va =
+        dep_sec.virtual_address() +
+        (inst_off -
+         args_.sec_malloc_mgr_->get(dep_sec.name()).exact_one_block_offset());
+    uint64_t dep_rip = dep_cur_va + inst.length;
+    uint64_t dep_jump_to = 0;
+    assert(ZYAN_SUCCESS(
+        ZydisCalcAbsoluteAddress(&inst, &operand, dep_cur_va, &dep_jump_to)));
+    assert(dep_jump_to == dep_rip + dep_rip_arg);
+
+    const LIEF::ELF::Section* dep_to_sec =
+        sec_from_va(args_.dependency_, dep_jump_to);
+    if (dep_to_sec == nullptr) {
+        return dep_rip_arg;
+    }
+    const auto& fat_to_sec = args_.fat_->get_section(dep_to_sec->name());
+    uint64_t fat_cur_va = fat_sec.virtual_address() + inst_off;
+    uint64_t fat_rip = fat_cur_va + inst.length;
+    uint64_t fat_rip_arg =
+        fat_to_sec.virtual_address() +
+        args_.sec_malloc_mgr_->get(fat_to_sec.name()).exact_one_block_offset() +
+        (dep_jump_to - dep_to_sec->virtual_address()) - fat_rip;
+    if (dep_to_sec->name() == sec_names::kPlt) {
+        assert(fat_to_sec.entry_size() == dep_to_sec->entry_size());
+        fat_rip_arg -= 1 * dep_to_sec->entry_size();
+    }
+    return fat_rip_arg;
+}
+
+uint64_t PatchRipInstsOp::cal_new_rip_arg(bool from_artifact,
+                                          const std::string& sec_name,
+                                          const ZydisDecodedInstruction& inst,
+                                          const ZydisDecodedOperand& operand,
+                                          uint64_t inst_off,
+                                          uint64_t artifact_rip_arg) {
+    if (from_artifact) {
+        return cal_new_rip_arg_internal<true>(
+            sec_name, inst, operand, inst_off, artifact_rip_arg);
+    } else {
+        return cal_new_rip_arg_internal<false>(
+            sec_name, inst, operand, inst_off, artifact_rip_arg);
+    }
+}
+
+const LIEF::ELF::Section* PatchRipInstsOp::sec_from_va(
+    const LIEF::ELF::Binary& bin, uint64_t va) const {
+    const LIEF::ELF::Section* sec = nullptr;
+    if (bin.has_section_with_va(va)) {
+        sec = &bin.section_from_virtual_address(va);
+    } else if (bin.has_section(sec_names::kData)) {
+        // __TMC_END__
+        const auto& data_sec = bin.get_section(sec_names::kData);
+        auto tmc_end = data_sec.virtual_address() + data_sec.size();
+        if (va == tmc_end) {
+            sec = &data_sec;
+        } else {
+            // assert(false);
+        }
+    } else {
+        // assert(false);
+    }
+    return sec;
 }
 
 }  // namespace shade_so

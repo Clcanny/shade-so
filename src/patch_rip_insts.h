@@ -47,10 +47,26 @@ class PatchRipInstsOp : public Operator {
                                        const ZydisDecodedOperand&,
                                        int)>& extract);
 
+    uint64_t cal_new_rip_arg(bool from_artifact,
+                             const std::string& sec_name,
+                             const ZydisDecodedInstruction& inst,
+                             const ZydisDecodedOperand& operand,
+                             uint64_t inst_off,
+                             uint64_t artifact_rip_arg);
+    template <bool from_artifact>
+    uint64_t cal_new_rip_arg_internal(const std::string& sec_name,
+                                      const ZydisDecodedInstruction& inst,
+                                      const ZydisDecodedOperand& operand,
+                                      uint64_t inst_off,
+                                      uint64_t artifact_rip_arg);
+    const LIEF::ELF::Section* sec_from_va(const LIEF::ELF::Binary& bin,
+                                          uint64_t va) const;
+
  private:
     Binary* src_;
     Binary* dst_;
     Binary* out_;
+    OperatorArgs args_;
     ZydisDecoder decoder_;
     ZydisFormatter formatter_;
 };

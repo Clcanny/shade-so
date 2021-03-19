@@ -19,6 +19,7 @@ extern const char* kInit;
 extern const char* kInitArray;
 extern const char* kFini;
 extern const char* kFiniArray;
+extern const char* kData;
 
 }  // namespace sec_names
 }  // namespace shade_so
