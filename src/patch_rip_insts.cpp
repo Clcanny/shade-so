@@ -220,9 +220,6 @@ uint64_t PatchRipInstsOp::cal_new_rip_arg_internal<true>(
 
     const LIEF::ELF::Section* artifact_to_sec =
         sec_from_va(args_.artifact_, artifact_jump_to);
-    if (artifact_to_sec == nullptr) {
-        return artifact_rip_arg;
-    }
     const auto& fat_to_sec = args_.fat_->get_section(artifact_to_sec->name());
 
     uint64_t fat_cur_va = fat_sec.virtual_address() + inst_off;
@@ -258,9 +255,6 @@ uint64_t PatchRipInstsOp::cal_new_rip_arg_internal<false>(
 
     const LIEF::ELF::Section* dep_to_sec =
         sec_from_va(args_.dependency_, dep_jump_to);
-    if (dep_to_sec == nullptr) {
-        return dep_rip_arg;
-    }
     const auto& fat_to_sec = args_.fat_->get_section(dep_to_sec->name());
     uint64_t fat_cur_va = fat_sec.virtual_address() + inst_off;
     uint64_t fat_rip = fat_cur_va + inst.length;
@@ -302,10 +296,10 @@ const LIEF::ELF::Section* PatchRipInstsOp::sec_from_va(
         if (va == tmc_end) {
             sec = &data_sec;
         } else {
-            // assert(false);
+            assert(false);
         }
     } else {
-        // assert(false);
+        assert(false);
     }
     return sec;
 }
