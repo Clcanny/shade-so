@@ -133,12 +133,8 @@ int64_t SecMalloc::malloc_dependency(int64_t addition, MallocUnit unit) {
     return malloc(sec.size() + addition, MallocUnit::kByte);
 }
 
-int64_t SecMalloc::latest_block_offset() const {
-    assert(blocks_.rbegin() != blocks_.rend());
-    return blocks_.rbegin()->first;
-}
-
 int64_t SecMalloc::exact_one_block_offset() const {
+    assert(max_malloc_times_ == 1);
     assert(blocks_.size() == 1);
     return blocks_.begin()->first;
 }

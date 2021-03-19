@@ -8,6 +8,8 @@
 #ifndef SRC_HANDLE_STRICT_SYMBOL_BINDING_H_
 #define SRC_HANDLE_STRICT_SYMBOL_BINDING_H_
 
+#include <cstdint>
+
 #include <LIEF/ELF.hpp>
 
 #include "src/operator.h"
@@ -22,6 +24,8 @@ class HandleStrictBindingSymOp : public Operator {
 
  private:
     OperatorArgs args_;
+    int64_t plt_got_off_;
+    int64_t got_off_;
 };
 
 }  // namespace shade_so

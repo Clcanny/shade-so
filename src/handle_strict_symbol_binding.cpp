@@ -18,12 +18,14 @@
 namespace shade_so {
 
 HandleStrictBindingSymOp::HandleStrictBindingSymOp(OperatorArgs args)
-    : args_(args) {
+    : args_(args), plt_got_off_(0), got_off_(0) {
 }
 
 void HandleStrictBindingSymOp::extend() {
-    args_.sec_malloc_mgr_->get_or_create(".plt.got", 0x0).malloc_dependency();
-    args_.sec_malloc_mgr_->get_or_create(".got", 0x0).malloc_dependency();
+    plt_got_off_ = args_.sec_malloc_mgr_->get_or_create(".plt.got", 0x0)
+                       .malloc_dependency();
+    got_off_ =
+        args_.sec_malloc_mgr_->get_or_create(".got", 0x0).malloc_dependency();
 }
 
 void HandleStrictBindingSymOp::merge() {
@@ -31,14 +33,8 @@ void HandleStrictBindingSymOp::merge() {
     auto dst_ = &args_.artifact_;
     auto out_ = args_.fat_;
 
-    merge_section(*src_,
-                  out_,
-                  ".plt.got",
-                  args_.sec_malloc_mgr_->get(".plt.got").latest_block_offset());
-    merge_section(*src_,
-                  out_,
-                  ".got",
-                  args_.sec_malloc_mgr_->get(".got").latest_block_offset());
+    merge_section(*src_, out_, ".plt.got", plt_got_off_);
+    merge_section(*src_, out_, ".got", got_off_);
 
     for (auto i = 0; i < src_->relocations().size(); i++) {
         const LIEF::ELF::Relocation& src_reloc = src_->relocations()[i];
