@@ -59,6 +59,7 @@ class PatchRipInstsOp : public Operator {
                                       const ZydisDecodedOperand& operand,
                                       uint64_t inst_off,
                                       uint64_t artifact_rip_arg);
+
     const LIEF::ELF::Section* sec_from_va(const LIEF::ELF::Binary& bin,
                                           uint64_t va) const;
 

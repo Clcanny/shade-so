@@ -1,5 +1,4 @@
 // Copyright (c) @ 2021 junbin.rjb.
-// Copyright (c) @ 2021 junbin.rjb.
 //
 // Author: junbin.rjb <837940593@qq.com>
 // Created: 2021/01/31
@@ -127,42 +126,6 @@ void PatchRipInstsOp::patch(
             }
             assert(value == bv.value);
 
-            // bool from_dst = offset < artifact_sec.size();
-            // const LIEF::ELF::Section& in_sec =
-            //     from_dst ? artifact_sec : dep_sec;
-            // LIEF::ELF::Binary* in_bin = from_dst ? dst_ : src_;
-
-            // uint64_t in_cur_va = in_sec.virtual_address() + offset -
-            //                      (from_dst ? 0 : artifact_sec.size());
-            // uint64_t in_rip = in_cur_va + inst.length;
-            // uint64_t in_jump_to = 0;
-            // assert(ZYAN_SUCCESS(ZydisCalcAbsoluteAddress(
-            //     &inst, &operand, in_cur_va, &in_jump_to)));
-            // assert(in_jump_to == in_rip + value);
-
-            // // __TMC_END__
-            // if (!in_bin->has_section_with_va(in_jump_to)) {
-            //     continue;
-            // }
-            // assert(in_bin->has_section_with_va(in_jump_to));
-            // const Section& in_to_sec =
-            // in_bin->get_section_with_va(in_jump_to); const Section&
-            // dst_to_sec = dst_->get_section(in_to_sec.name()); const Section&
-            // out_to_sec = out_->get_section(in_to_sec.name()); uint64_t
-            // out_cur_va = fat_sec.virtual_address() + offset; uint64_t out_rip
-            // = out_cur_va + inst.length; int64_t new_value =
-            // out_to_sec.virtual_address() +
-            //                     (from_dst ? 0 : dst_to_sec.size()) +
-            //                     (in_jump_to - in_to_sec.virtual_address()) -
-            //                     out_rip;
-            // if (!from_dst && sec_name == ".plt") {
-            //     continue;
-            // }
-            // if (!from_dst) {
-            //     if (in_to_sec.name() == ".plt") {
-            //         new_value -= 1 * in_to_sec.entry_size();
-            //     }
-            // }
             uint64_t new_value = cal_new_rip_arg(offset < artifact_sec.size(),
                                                  sec_name,
                                                  inst,
@@ -174,27 +137,23 @@ void PatchRipInstsOp::patch(
             for (std::size_t i = 0; i < bv.size; i++) {
                 bytes_to_be_patched.emplace_back((new_value >> (8 * i)) & 0xFF);
             }
-            out_->patch_address(fat_sec.virtual_address() + offset + bv.offset,
-                                bytes_to_be_patched);
+            uint64_t fat_cur_va = fat_sec.virtual_address() + offset;
+            uint64_t fat_rip = fat_cur_va + inst.length;
+            out_->patch_address(fat_cur_va + bv.offset, bytes_to_be_patched);
 
-            // ZydisDecodedInstruction new_inst;
-            // assert(ZYAN_SUCCESS(ZydisDecoderDecodeBuffer(
-            //     &decoder_,
-            //     out_->get_section(sec_name).content().data() + offset,
-            //     inst.length,
-            //     &new_inst)));
-            // uint64_t new_out_jump_to = 0;
-            // assert(ZYAN_SUCCESS(ZydisCalcAbsoluteAddress(
-            //     &new_inst,
-            //     &new_inst.operands[0] + (begin - &inst.operands[0]),
-            //     out_cur_va,
-            //     &new_out_jump_to)));
-            // assert(new_out_jump_to - out_to_sec.virtual_address() -
-            //            (from_dst ? 0 : dst_to_sec.size()) ==
-            //        in_jump_to - in_to_sec.virtual_address() -
-            //            ((!from_dst && in_to_sec.name() == ".plt")
-            //                 ? in_to_sec.entry_size()
-            //                 : 0));
+            ZydisDecodedInstruction new_inst;
+            assert(ZYAN_SUCCESS(ZydisDecoderDecodeBuffer(
+                &decoder_,
+                args_.fat_->get_section(sec_name).content().data() + offset,
+                inst.length,
+                &new_inst)));
+            uint64_t new_fat_jump_to = 0;
+            assert(ZYAN_SUCCESS(ZydisCalcAbsoluteAddress(
+                &new_inst,
+                &new_inst.operands[0] + (begin - &inst.operands[0]),
+                fat_cur_va,
+                &new_fat_jump_to)));
+            assert(new_fat_jump_to - fat_rip == new_value);
         }
         offset += inst.length;
     }
