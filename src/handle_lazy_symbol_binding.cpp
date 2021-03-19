@@ -33,6 +33,14 @@ HandleLazyBindingSymOp::HandleLazyBindingSymOp(OperatorArgs args)
         &decoder_, ZYDIS_MACHINE_MODE_LONG_64, ZYDIS_ADDRESS_WIDTH_64);
 }
 
+void HandleLazyBindingSymOp::extend() {
+    args_.sec_malloc_mgr_->get_or_create(".plt", 0).malloc_dependency();
+    args_.sec_malloc_mgr_->get_or_create(".got.plt", 0).malloc_dependency();
+    args_.sec_malloc_mgr_->get_or_create(".rela.plt", 0).malloc_dependency();
+    args_.sec_malloc_mgr_->get_or_create(".dynsym", 0).malloc_dependency();
+    args_.sec_malloc_mgr_->get_or_create(".dynstr", 0).malloc_dependency();
+}
+
 void HandleLazyBindingSymOp::merge() {
     auto src_ = &args_.dependency_;
     auto dst_ = &args_.artifact_;

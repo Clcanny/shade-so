@@ -39,15 +39,15 @@ int main() {
     for (const std::string& sec_name : std::vector<std::string>{
              ".plt.got",
              ".got",
-             ".dynsym",
+             // ".dynsym",
              ".symtab",
              ".rela.dyn",
              ".strtab",
-             ".text",
-             ".plt",
-             ".got.plt",
-             ".rela.plt",
-             ".dynstr"
+             ".text"
+             // ".plt",
+             // ".got.plt",
+             // ".rela.plt",
+             // ".dynstr"
              // ".rodata",
              // ".init_array",
              // ".data"
@@ -67,6 +67,8 @@ int main() {
     handle_init_fini_op.extend();
     shade_so::HandleGlobalDataOp handle_global_data_op(args);
     handle_global_data_op.extend();
+    shade_so::HandleLazyBindingSymOp handle_lazy_binding_sym_op(args);
+    handle_lazy_binding_sym_op.extend();
 
     do {
         // if (!src->has(LIEF::ELF::SEGMENT_TYPES::PT_TLS)) {
@@ -98,7 +100,6 @@ int main() {
     // shade_so::MergeSection(src.get(), dst.get(), out.get(), ".tdata", 0x0)();
     // shade_so::MergeSection(src.get(), dst.get(), out.get(), ".tbss", 0x0)();
     shade_so::MergeSection(src.get(), dst.get(), out.get(), ".got", 0x0)();
-    shade_so::HandleLazyBindingSymOp handle_lazy_binding_sym_op(args);
     handle_lazy_binding_sym_op.merge();
     shade_so::MergeTextSection(src.get(), dst.get(), out.get())();
     shade_so::HandleStrictSymbolBinding(src.get(), dst.get(), out.get())();

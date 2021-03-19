@@ -21,6 +21,7 @@ namespace shade_so {
 class HandleLazyBindingSymOp : public Operator {
  public:
     explicit HandleLazyBindingSymOp(OperatorArgs args);
+    void extend() override;
     void merge() override;
 
  private:
