@@ -105,16 +105,17 @@ void PatchRipInstsOp::patch(
             const ZydisDecodedOperand& operand = *begin;
             RipOperand rip_operand = extract(inst, operand, operand_id);
             uint64_t rip_arg = get_rip_arg(sec_name, offset, rip_operand);
-            uint64_t new_value = cal_new_rip_arg(offset < artifact_sec.size(),
-                                                 sec_name,
-                                                 inst,
-                                                 operand,
-                                                 offset,
-                                                 rip_arg);
+            uint64_t new_rip_arg = cal_new_rip_arg(offset < artifact_sec.size(),
+                                                   sec_name,
+                                                   inst,
+                                                   operand,
+                                                   offset,
+                                                   rip_arg);
 
             std::vector<uint8_t> bytes_to_be_patched;
             for (std::size_t i = 0; i < rip_operand.size; i++) {
-                bytes_to_be_patched.emplace_back((new_value >> (8 * i)) & 0xFF);
+                bytes_to_be_patched.emplace_back((new_rip_arg >> (8 * i)) &
+                                                 0xFF);
             }
             uint64_t fat_cur_va = fat_sec.virtual_address() + offset;
             uint64_t fat_rip = fat_cur_va + inst.length;
@@ -133,7 +134,7 @@ void PatchRipInstsOp::patch(
                 &new_inst.operands[0] + (begin - &inst.operands[0]),
                 fat_cur_va,
                 &new_fat_jump_to)));
-            assert(new_fat_jump_to - fat_rip == new_value);
+            assert(new_fat_jump_to - fat_rip == new_rip_arg);
         }
         offset += inst.length;
     }
