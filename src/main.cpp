@@ -33,8 +33,8 @@ int main() {
         LIEF::ELF::Parser::parse("main.out"));
 
     shade_so::SecMallocMgr sec_malloc_mgr(*dst, *src, out.get());
-    for (const std::string& sec_name : std::vector<std::string>{
-             ".plt.got", ".got", ".symtab", ".rela.dyn", ".strtab", ".text"}) {
+    for (const std::string& sec_name :
+         std::vector<std::string>{".symtab", ".rela.dyn", ".strtab", ".text"}) {
         sec_malloc_mgr.get_or_create(sec_name, 0x0);
     }
     for (auto& [_, sec_malloc] : sec_malloc_mgr.get()) {
@@ -47,11 +47,12 @@ int main() {
     handle_global_data_op.extend();
     shade_so::HandleLazyBindingSymOp handle_lazy_binding_sym_op(args);
     handle_lazy_binding_sym_op.extend();
+    shade_so::HandleStrictBindingSymOp handle_strict_binding_sym_op(args);
+    handle_strict_binding_sym_op.extend();
 
-    shade_so::MergeSection(src.get(), dst.get(), out.get(), ".got", 0x0)();
+    // shade_so::MergeSection(src.get(), dst.get(), out.get(), ".got", 0x0)();
     handle_lazy_binding_sym_op.merge();
     shade_so::MergeTextSection(src.get(), dst.get(), out.get())();
-    shade_so::HandleStrictBindingSymOp handle_strict_binding_sym_op(args);
     handle_strict_binding_sym_op.merge();
 
     handle_init_fini_op.merge();

@@ -17,6 +17,7 @@ namespace shade_so {
 class HandleStrictBindingSymOp : public Operator {
  public:
     explicit HandleStrictBindingSymOp(OperatorArgs args);
+    void extend() override;
     void merge() override;
 
  private:

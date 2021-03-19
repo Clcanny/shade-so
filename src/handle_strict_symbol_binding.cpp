@@ -21,6 +21,11 @@ HandleStrictBindingSymOp::HandleStrictBindingSymOp(OperatorArgs args)
     : args_(args) {
 }
 
+void HandleStrictBindingSymOp::extend() {
+    args_.sec_malloc_mgr_->get_or_create(".plt.got", 0x0).malloc_dependency();
+    args_.sec_malloc_mgr_->get_or_create(".got", 0x0).malloc_dependency();
+}
+
 void HandleStrictBindingSymOp::merge() {
     auto src_ = &args_.dependency_;
     auto dst_ = &args_.artifact_;
