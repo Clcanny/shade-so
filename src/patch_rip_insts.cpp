@@ -19,10 +19,7 @@
 
 namespace shade_so {
 
-PatchRipInstsOp::PatchRipInstsOp(OperatorArgs args)
-    : src_(const_cast<LIEF::ELF::Binary*>(&args.dependency_)),
-      dst_(const_cast<LIEF::ELF::Binary*>(&args.artifact_)), out_(args.fat_),
-      args_(args) {
+PatchRipInstsOp::PatchRipInstsOp(OperatorArgs args) : args_(args) {
     ZydisDecoderInit(
         &decoder_, ZYDIS_MACHINE_MODE_LONG_64, ZYDIS_ADDRESS_WIDTH_64);
     ZydisFormatterInit(&formatter_, ZYDIS_FORMATTER_STYLE_INTEL);
@@ -119,8 +116,8 @@ void PatchRipInstsOp::patch(
             }
             uint64_t fat_cur_va = fat_sec.virtual_address() + offset;
             uint64_t fat_rip = fat_cur_va + inst.length;
-            out_->patch_address(fat_cur_va + rip_operand.offset,
-                                bytes_to_be_patched);
+            args_.fat_->patch_address(fat_cur_va + rip_operand.offset,
+                                      bytes_to_be_patched);
 
             ZydisDecodedInstruction new_inst;
             assert(ZYAN_SUCCESS(ZydisDecoderDecodeBuffer(

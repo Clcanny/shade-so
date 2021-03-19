@@ -20,20 +20,16 @@
 
 namespace shade_so {
 
+struct RipOperand {
+    uint64_t offset;
+    uint64_t size;
+    // Use int64_t to represent value of type int32_t, uint32_t, int64_t,
+    // uint64_t. I don't think overflow will happen in conversion from
+    // uint64_t to int64_t.
+    int64_t arg;
+};
+
 class PatchRipInstsOp : public Operator {
-    using Binary = LIEF::ELF::Binary;
-    using Section = LIEF::ELF::Section;
-    using Symbol = LIEF::ELF::Symbol;
-
-    struct RipOperand {
-        uint64_t offset;
-        uint64_t size;
-        // Use int64_t to represent value of type int32_t, uint32_t, int64_t,
-        // uint64_t. I don't think overflow will happen in conversion from
-        // uint64_t to int64_t.
-        int64_t arg;
-    };
-
  public:
     explicit PatchRipInstsOp(OperatorArgs args);
     void patch() override;
@@ -67,9 +63,6 @@ class PatchRipInstsOp : public Operator {
                                           uint64_t va) const;
 
  private:
-    Binary* src_;
-    Binary* dst_;
-    Binary* out_;
     OperatorArgs args_;
     ZydisDecoder decoder_;
     ZydisFormatter formatter_;
