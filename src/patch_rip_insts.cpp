@@ -53,9 +53,9 @@ void PatchRipInstsOp::patch(const std::string& sec_name) {
             const auto operand_offset = inst.raw.disp.offset;
             const auto operand_size = inst.raw.disp.size / 8;
             assert(operand_id == 0);
-            return BriefValue{.offset = inst.raw.disp.offset,
+            return RipOperand{.offset = inst.raw.disp.offset,
                               .size = inst.raw.disp.size / 8,
-                              .value = operand.mem.disp.value};
+                              .arg = operand.mem.disp.value};
         });
     patch(
         sec_name,
@@ -69,16 +69,16 @@ void PatchRipInstsOp::patch(const std::string& sec_name) {
            int operand_id) {
             assert(operand_id < 2);
             assert(inst.raw.imm[operand_id].size % 8 == 0);
-            return BriefValue{.offset = inst.raw.imm[operand_id].offset,
+            return RipOperand{.offset = inst.raw.imm[operand_id].offset,
                               .size = inst.raw.imm[operand_id].size / 8,
-                              .value = operand.imm.value.s};
+                              .arg = operand.imm.value.s};
         });
 }
 
 void PatchRipInstsOp::patch(
     const std::string& sec_name,
     const std::function<bool(const ZydisDecodedOperand&)>& need_to_patch,
-    const std::function<BriefValue(const ZydisDecodedInstruction&,
+    const std::function<RipOperand(const ZydisDecodedInstruction&,
                                    const ZydisDecodedOperand&,
                                    int)>& extract) {
     const auto& dep_sec = args_.dependency_.get_section(sec_name);
@@ -103,43 +103,23 @@ void PatchRipInstsOp::patch(
              operand_id++) {
             assert(operand_id < 2);
             const ZydisDecodedOperand& operand = *begin;
-            BriefValue bv = extract(inst, operand, operand_id);
-            int64_t value = 0;
-            for (decltype(bv.size) i = 0; i < bv.size; i++) {
-                auto t = fat_content[offset + bv.offset + i] * 1L;
-                value |= t << (8 * i);
-            }
-            switch (bv.size) {
-            case 1:
-                value = static_cast<int8_t>(value);
-                break;
-            case 2:
-                value = static_cast<int16_t>(value);
-                break;
-            case 4:
-                value = static_cast<int32_t>(value);
-                break;
-            case 8:
-                break;
-            default:
-                assert(false);
-            }
-            assert(value == bv.value);
-
+            RipOperand rip_operand = extract(inst, operand, operand_id);
+            uint64_t rip_arg = get_rip_arg(sec_name, offset, rip_operand);
             uint64_t new_value = cal_new_rip_arg(offset < artifact_sec.size(),
                                                  sec_name,
                                                  inst,
                                                  operand,
                                                  offset,
-                                                 value);
+                                                 rip_arg);
 
             std::vector<uint8_t> bytes_to_be_patched;
-            for (std::size_t i = 0; i < bv.size; i++) {
+            for (std::size_t i = 0; i < rip_operand.size; i++) {
                 bytes_to_be_patched.emplace_back((new_value >> (8 * i)) & 0xFF);
             }
             uint64_t fat_cur_va = fat_sec.virtual_address() + offset;
             uint64_t fat_rip = fat_cur_va + inst.length;
-            out_->patch_address(fat_cur_va + bv.offset, bytes_to_be_patched);
+            out_->patch_address(fat_cur_va + rip_operand.offset,
+                                bytes_to_be_patched);
 
             ZydisDecodedInstruction new_inst;
             assert(ZYAN_SUCCESS(ZydisDecoderDecodeBuffer(
@@ -158,6 +138,35 @@ void PatchRipInstsOp::patch(
         offset += inst.length;
     }
     assert(offset == fat_content.size());
+}
+
+uint64_t PatchRipInstsOp::get_rip_arg(const std::string& sec_name,
+                                      uint64_t inst_off,
+                                      RipOperand rip_operand) {
+    std::vector<uint8_t> fat_content =
+        args_.fat_->get_section(sec_name).content();
+    uint64_t rip_arg = 0;
+    for (decltype(rip_operand.size) i = 0; i < rip_operand.size; i++) {
+        auto t = fat_content[inst_off + rip_operand.offset + i] * 1L;
+        rip_arg |= t << (8 * i);
+    }
+    switch (rip_operand.size) {
+    case 1:
+        rip_arg = static_cast<int8_t>(rip_arg);
+        break;
+    case 2:
+        rip_arg = static_cast<int16_t>(rip_arg);
+        break;
+    case 4:
+        rip_arg = static_cast<int32_t>(rip_arg);
+        break;
+    case 8:
+        break;
+    default:
+        assert(false);
+    }
+    assert(rip_arg == rip_operand.arg);
+    return rip_arg;
 }
 
 template <>
