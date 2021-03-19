@@ -10,19 +10,17 @@
 
 #include <LIEF/ELF.hpp>
 
+#include "src/operator.h"
+
 namespace shade_so {
 
-class HandleStrictSymbolBinding {
+class HandleStrictBindingSymOp : public Operator {
  public:
-    HandleStrictSymbolBinding(LIEF::ELF::Binary* src,
-                              LIEF::ELF::Binary* dst,
-                              LIEF::ELF::Binary* out);
-    void operator()();
+    explicit HandleStrictBindingSymOp(OperatorArgs args);
+    void merge() override;
 
  private:
-    LIEF::ELF::Binary* src_;
-    LIEF::ELF::Binary* dst_;
-    LIEF::ELF::Binary* out_;
+    OperatorArgs args_;
 };
 
 }  // namespace shade_so

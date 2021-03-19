@@ -17,22 +17,30 @@
 
 namespace shade_so {
 
-HandleStrictSymbolBinding::HandleStrictSymbolBinding(LIEF::ELF::Binary* src,
-                                                     LIEF::ELF::Binary* dst,
-                                                     LIEF::ELF::Binary* out)
-    : src_(src), dst_(dst), out_(out) {
+HandleStrictBindingSymOp::HandleStrictBindingSymOp(OperatorArgs args)
+    : args_(args) {
 }
 
-void HandleStrictSymbolBinding::operator()() {
-    MergeSection(src_, dst_, out_, ".plt.got", 0x90)();
-    MergeSection(src_, dst_, out_, ".got", 0x0)();
+void HandleStrictBindingSymOp::merge() {
+    auto src_ = &args_.dependency_;
+    auto dst_ = &args_.artifact_;
+    auto out_ = args_.fat_;
+
+    merge_section(*src_,
+                  out_,
+                  ".plt.got",
+                  args_.sec_malloc_mgr_->get(".plt.got").latest_block_offset());
+    merge_section(*src_,
+                  out_,
+                  ".got",
+                  args_.sec_malloc_mgr_->get(".got").latest_block_offset());
 
     for (auto i = 0; i < src_->relocations().size(); i++) {
         const LIEF::ELF::Relocation& src_reloc = src_->relocations()[i];
         // TODO(junbin.rjb)
         // Split.
         if (src_reloc.type() ==
-                static_cast<uint32_t>(RelocType::R_X86_64_GLOB_DAT)) {
+            static_cast<uint32_t>(RelocType::R_X86_64_GLOB_DAT)) {
             const LIEF::ELF::Section& src_sec =
                 src_->section_from_virtual_address(src_reloc.address());
             const LIEF::ELF::Section& dst_sec =
@@ -57,7 +65,8 @@ void HandleStrictSymbolBinding::operator()() {
                         dst_->get_section(name).size() +
                         (src_sym.value() - src_to_sec.virtual_address());
             }
-            // if (src_reloc.type() == static_cast<uint32_t>(RelocType::R_X86_64_RELATIVE)) {
+            // if (src_reloc.type() ==
+            // static_cast<uint32_t>(RelocType::R_X86_64_RELATIVE)) {
             //     value = 0x8b01 + (0x8b01 - 0x8001);
             // }
             LIEF::ELF::Symbol out_sym(src_sym.name(),
