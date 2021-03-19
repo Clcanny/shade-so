@@ -8,21 +8,23 @@
 #ifndef SRC_MERGE_TEXT_SECTION_H_
 #define SRC_MERGE_TEXT_SECTION_H_
 
+#include <cstdint>
+
 #include <LIEF/ELF.hpp>
+
+#include "src/operator.h"
 
 namespace shade_so {
 
-class MergeTextSection {
+class HandleCodeOp : public Operator {
  public:
-    MergeTextSection(LIEF::ELF::Binary* src,
-                     LIEF::ELF::Binary* dst,
-                     LIEF::ELF::Binary* out);
-    void operator()();
+    explicit HandleCodeOp(OperatorArgs args);
+    void extend() override;
+    void merge() override;
 
  private:
-    LIEF::ELF::Binary* src_;
-    LIEF::ELF::Binary* dst_;
-    LIEF::ELF::Binary* out_;
+    int64_t text_off_;
+    OperatorArgs args_;
 };
 
 };  // namespace shade_so

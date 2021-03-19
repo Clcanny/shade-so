@@ -16,17 +16,21 @@
 
 namespace shade_so {
 
-MergeTextSection::MergeTextSection(LIEF::ELF::Binary* src,
-                                   LIEF::ELF::Binary* dst,
-                                   LIEF::ELF::Binary* out)
-    : src_(src), dst_(dst), out_(out) {
+HandleCodeOp::HandleCodeOp(OperatorArgs args) : args_(args) {
 }
 
-void MergeTextSection::operator()() {
-    // I use a very loose value.
-
+void HandleCodeOp::extend() {
     uint8_t nop_code = 0x90;
-    MergeSection(src_, dst_, out_, ".text", nop_code)();
+    text_off_ =
+        args_.sec_malloc_mgr_->get_or_create(".text", 0x90).malloc_dependency();
+}
+
+void HandleCodeOp::merge() {
+    auto src_ = const_cast<LIEF::ELF::Binary*>(&args_.dependency_);
+    auto dst_ = const_cast<LIEF::ELF::Binary*>(&args_.artifact_);
+    auto out_ = args_.fat_;
+
+    merge_section(*src_, out_, ".text", text_off_);
     const LIEF::ELF::Section& src_text_sec = src_->text_section();
     const LIEF::ELF::Section& dst_text_sec = dst_->text_section();
     const LIEF::ELF::Section& out_text_sec = out_->text_section();
