@@ -14,17 +14,14 @@
 
 #include <LIEF/ELF.hpp>
 
+#include "src/operator.h"
+
 namespace shade_so {
 
-class HandleLazySymbolBinding {
-    using Binary = LIEF::ELF::Binary;
-    using Section = LIEF::ELF::Section;
-    using Symbol = LIEF::ELF::Symbol;
-    using Relocation = LIEF::ELF::Relocation;
-
+class HandleLazyBindingSymOp : public Operator {
  public:
-    HandleLazySymbolBinding(Binary* src, Binary* dst, Binary* out);
-    uint64_t operator()();
+    explicit HandleLazyBindingSymOp(OperatorArgs args);
+    void merge() override;
 
  private:
     uint64_t check() const;
@@ -35,13 +32,11 @@ class HandleLazySymbolBinding {
     void handle_plt_entry_inst(int entry_id,
                                uint64_t offset,
                                const ZydisDecodedInstruction& inst);
-    ZydisDecodedOperand get_exactly_one_visible_operand(
+    ZydisDecodedOperand get_exact_one_visible_operand(
         const ZydisDecodedInstruction& inst);
 
  private:
-    Binary* src_;
-    Binary* dst_;
-    Binary* out_;
+    OperatorArgs args_;
     ZydisDecoder decoder_;
 };
 

@@ -98,7 +98,8 @@ int main() {
     // shade_so::MergeSection(src.get(), dst.get(), out.get(), ".tdata", 0x0)();
     // shade_so::MergeSection(src.get(), dst.get(), out.get(), ".tbss", 0x0)();
     shade_so::MergeSection(src.get(), dst.get(), out.get(), ".got", 0x0)();
-    shade_so::HandleLazySymbolBinding(src.get(), dst.get(), out.get())();
+    shade_so::HandleLazyBindingSymOp handle_lazy_binding_sym_op(args);
+    handle_lazy_binding_sym_op.merge();
     shade_so::MergeTextSection(src.get(), dst.get(), out.get())();
     shade_so::HandleStrictSymbolBinding(src.get(), dst.get(), out.get())();
 
