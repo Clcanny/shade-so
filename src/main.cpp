@@ -52,15 +52,14 @@ int main() {
     shade_so::HandleCodeOp handle_code_op(args);
     handle_code_op.extend();
 
-    // shade_so::MergeSection(src.get(), dst.get(), out.get(), ".got", 0x0)();
     handle_lazy_binding_sym_op.merge();
-    // shade_so::MergeTextSection(src.get(), dst.get(), out.get())();
     handle_code_op.merge();
     handle_strict_binding_sym_op.merge();
     handle_init_fini_op.merge();
     handle_global_data_op.merge();
 
-    shade_so::PatchRipInsts(src.get(), dst.get(), out.get())();
+    shade_so::PatchRipInstsOp patch_rip_insts_op(args);
+    patch_rip_insts_op.patch();
 
     // Set relocation and symbol done.
     // Reset symbol value.

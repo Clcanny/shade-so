@@ -16,9 +16,11 @@
 
 #include <LIEF/ELF.hpp>
 
+#include "src/operator.h"
+
 namespace shade_so {
 
-class PatchRipInsts {
+class PatchRipInstsOp : public Operator {
     using Binary = LIEF::ELF::Binary;
     using Section = LIEF::ELF::Section;
     using Symbol = LIEF::ELF::Symbol;
@@ -33,8 +35,8 @@ class PatchRipInsts {
     };
 
  public:
-    PatchRipInsts(Binary* src, Binary* dst, Binary* out);
-    void operator()();
+    explicit PatchRipInstsOp(OperatorArgs args);
+    void patch() override;
 
  private:
     void patch(const std::string& sec_name);

@@ -22,12 +22,13 @@ namespace shade_so {
 namespace {
 
 // static auto kLogger = spdlog::rotating_logger_mt(
-//     "PatchRipInsts", "logs/shade_so.LOG", 5 * 1024 * 1024, 3);
+//     "PatchRipInstsOp", "logs/shade_so.LOG", 5 * 1024 * 1024, 3);
 
 }  // namespace
 
-PatchRipInsts::PatchRipInsts(Binary* src, Binary* dst, Binary* out)
-    : src_(src), dst_(dst), out_(out) {
+PatchRipInstsOp::PatchRipInstsOp(OperatorArgs args)
+    : src_(const_cast<LIEF::ELF::Binary*>(&args.dependency_)),
+      dst_(const_cast<LIEF::ELF::Binary*>(&args.artifact_)), out_(args.fat_) {
     assert(src_ != nullptr);
     assert(dst_ != nullptr);
     assert(out_ != nullptr);
@@ -36,14 +37,14 @@ PatchRipInsts::PatchRipInsts(Binary* src, Binary* dst, Binary* out)
     ZydisFormatterInit(&formatter_, ZYDIS_FORMATTER_STYLE_INTEL);
 }
 
-void PatchRipInsts::operator()() {
+void PatchRipInstsOp::patch() {
     for (const std::string& sec_name :
          std::array<std::string, 4>{".init", ".text", ".plt", ".plt.got"}) {
         patch(sec_name);
     }
 }
 
-void PatchRipInsts::patch(const std::string& sec_name) {
+void PatchRipInstsOp::patch(const std::string& sec_name) {
     patch(
         sec_name,
         [](const ZydisDecodedOperand& operand) {
@@ -83,7 +84,7 @@ void PatchRipInsts::patch(const std::string& sec_name) {
         });
 }
 
-void PatchRipInsts::patch(
+void PatchRipInstsOp::patch(
     const std::string& sec_name,
     const std::function<bool(const ZydisDecodedOperand&)>& need_to_patch,
     const std::function<BriefValue(const ZydisDecodedInstruction&,
