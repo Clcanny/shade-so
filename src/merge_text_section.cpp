@@ -22,7 +22,7 @@ HandleCodeOp::HandleCodeOp(OperatorArgs args) : args_(args) {
 void HandleCodeOp::extend() {
     uint8_t nop_code = 0x90;
     text_off_ =
-        args_.sec_malloc_mgr_->get_or_create(".text", 0x90).malloc_dependency();
+        args_.sec_malloc_mgr_->get_or_create(".text").malloc_dependency();
 }
 
 void HandleCodeOp::merge() {

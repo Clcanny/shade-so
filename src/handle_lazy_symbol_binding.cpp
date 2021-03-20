@@ -34,11 +34,11 @@ HandleLazyBindingSymOp::HandleLazyBindingSymOp(OperatorArgs args)
 }
 
 void HandleLazyBindingSymOp::extend() {
-    args_.sec_malloc_mgr_->get_or_create(".plt", 0).malloc_dependency();
-    args_.sec_malloc_mgr_->get_or_create(".got.plt", 0).malloc_dependency();
-    args_.sec_malloc_mgr_->get_or_create(".rela.plt", 0).malloc_dependency();
-    args_.sec_malloc_mgr_->get_or_create(".dynsym", 0).malloc_dependency();
-    args_.sec_malloc_mgr_->get_or_create(".dynstr", 0).malloc_dependency();
+    args_.sec_malloc_mgr_->get_or_create(".plt").malloc_dependency();
+    args_.sec_malloc_mgr_->get_or_create(".got.plt").malloc_dependency();
+    args_.sec_malloc_mgr_->get_or_create(".rela.plt").malloc_dependency();
+    args_.sec_malloc_mgr_->get_or_create(".dynsym").malloc_dependency();
+    args_.sec_malloc_mgr_->get_or_create(".dynstr").malloc_dependency();
 }
 
 void HandleLazyBindingSymOp::merge() {

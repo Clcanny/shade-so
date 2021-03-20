@@ -16,23 +16,6 @@
 
 namespace shade_so {
 
-class ExtendSection {
-    using Binary = LIEF::ELF::Binary;
-    using Section = LIEF::ELF::Section;
-
- public:
-    ExtendSection(Binary* bin, const std::string& name, uint64_t size);
-    uint64_t operator()();
-
- private:
-    void ceil_size();
-
- private:
-    Binary* bin_;
-    const Section& section_;
-    uint64_t size_;
-};
-
 enum class MallocUnit { kByte, kEntry };
 
 class SecMalloc {
@@ -41,11 +24,12 @@ class SecMalloc {
               const LIEF::ELF::Binary& dependency,
               LIEF::ELF::Binary* fat,
               const std::string& name,
+              bool need_align,
+              bool allow_hole,
               uint8_t empty_val,
-              bool consider_alignment,
-              int max_malloc_times);
+              int max_times);
     SecMalloc(const SecMalloc& other) = delete;
-    SecMalloc(SecMalloc&& other) = default;
+    SecMalloc(SecMalloc&& other) = delete;
     SecMalloc& operator=(const SecMalloc& other) = delete;
     SecMalloc& operator=(SecMalloc&& other) = delete;
 
@@ -53,6 +37,7 @@ class SecMalloc {
     int64_t malloc_dependency(int64_t addition = 0,
                               MallocUnit unit = MallocUnit::kByte);
     int64_t exact_one_block_offset() const;
+    void close() const;
 
  private:
     const LIEF::ELF::Binary& artifact_;
@@ -61,17 +46,24 @@ class SecMalloc {
     LIEF::ELF::Binary* const fat_;
     LIEF::ELF::Section* sec_;
     std::string name_;
+
     int64_t sec_align_;
     int64_t elf_align_;
-
+    bool allow_hole_;
     uint8_t empty_val_;
 
     // Start address to size.
     std::map<int64_t, int64_t> blocks_;
-    int max_malloc_times_;
+    int max_times_;
 
     int64_t size_;
     int64_t capacity_;
+};
+
+struct SecMallocCfg {
+    bool is_table;
+    bool is_code;
+    bool multi_malloc;
 };
 
 class SecMallocMgr {
@@ -81,12 +73,10 @@ class SecMallocMgr {
                  LIEF::ELF::Binary* fat);
     std::map<std::string, SecMalloc>& get();
     SecMalloc& get(const std::string& name);
-    SecMalloc& get_or_create(const std::string& name,
-                             uint8_t empty_val_,
-                             bool consider_alignment = false,
-                             int max_malloc_times = 1);
+    SecMalloc& get_or_create(const std::string& name);
 
  private:
+    static const std::map<std::string, SecMallocCfg> sec_malloc_cfgs_;
     const LIEF::ELF::Binary& artifact_;
     const LIEF::ELF::Binary& dependency_;
     LIEF::ELF::Binary* fat_;

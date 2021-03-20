@@ -19,6 +19,16 @@ const char* kInitArray = ".init_array";
 const char* kFini = ".fini";
 const char* kFiniArray = ".fini_array";
 const char* kData = ".data";
+const char* kBss = ".bss";
+const char* kRodata = ".rodata";
+const char* kSymtab = ".symtab";
+const char* kRelaDyn = ".rela.dyn";
+const char* kStrtab = ".strtab";
+const char* kPltGot = ".plt.got";
+const char* kGot = ".got";
+const char* kText = ".text";
+const char* kDynsym = ".dynsym";
+const char* kDynstr = ".dynstr";
 
 }  // namespace sec_names
 }  // namespace shade_so

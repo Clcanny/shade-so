@@ -140,7 +140,7 @@ void PatchRipInstsOp::patch(
 
 uint64_t PatchRipInstsOp::get_rip_arg(const std::string& sec_name,
                                       uint64_t inst_off,
-                                      RipOperand rip_operand) {
+                                      RipOperand rip_operand) const {
     std::vector<uint8_t> fat_content =
         args_.fat_->get_section(sec_name).content();
     uint64_t rip_arg = 0;
@@ -173,7 +173,7 @@ uint64_t PatchRipInstsOp::cal_new_rip_arg_internal<true>(
     const ZydisDecodedInstruction& inst,
     const ZydisDecodedOperand& operand,
     uint64_t inst_off,
-    uint64_t artifact_rip_arg) {
+    uint64_t artifact_rip_arg) const {
     const auto& artifact_sec = args_.artifact_.get_section(sec_name);
     const auto& fat_sec = args_.fat_->get_section(sec_name);
 
@@ -202,7 +202,7 @@ uint64_t PatchRipInstsOp::cal_new_rip_arg_internal<false>(
     const ZydisDecodedInstruction& inst,
     const ZydisDecodedOperand& operand,
     uint64_t inst_off,
-    uint64_t dep_rip_arg) {
+    uint64_t dep_rip_arg) const {
     if (sec_name == sec_names::kPlt) {
         return dep_rip_arg;
     }
@@ -240,7 +240,7 @@ uint64_t PatchRipInstsOp::cal_new_rip_arg(bool from_artifact,
                                           const ZydisDecodedInstruction& inst,
                                           const ZydisDecodedOperand& operand,
                                           uint64_t inst_off,
-                                          uint64_t artifact_rip_arg) {
+                                          uint64_t artifact_rip_arg) const {
     if (from_artifact) {
         return cal_new_rip_arg_internal<true>(
             sec_name, inst, operand, inst_off, artifact_rip_arg);

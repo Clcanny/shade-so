@@ -21,11 +21,11 @@ HandleGlobalDataOp::HandleGlobalDataOp(OperatorArgs args)
 }
 
 void HandleGlobalDataOp::extend() {
-    args_.sec_malloc_mgr_->get_or_create(".bss", 0).malloc_dependency();
+    args_.sec_malloc_mgr_->get_or_create(".bss").malloc_dependency();
     rodata_off_ =
-        args_.sec_malloc_mgr_->get_or_create(".rodata", 0).malloc_dependency();
+        args_.sec_malloc_mgr_->get_or_create(".rodata").malloc_dependency();
     data_off_ =
-        args_.sec_malloc_mgr_->get_or_create(".data", 0).malloc_dependency();
+        args_.sec_malloc_mgr_->get_or_create(".data").malloc_dependency();
 
     // auto dyn_relocs = args_.dependency_.dynamic_relocations();
     // auto n = std::count_if(
@@ -35,7 +35,7 @@ void HandleGlobalDataOp::extend() {
     //         return reloc.type() == static_cast<uint32_t>(
     //                                    shade_so::RelocType::R_X86_64_RELATIVE);
     //     });
-    // args_.sec_malloc_mgr_->get_or_create(".rela.plt", 0, false, 2)
+    // args_.sec_malloc_mgr_->get_or_create(".rela.plt")
     //     .malloc(n, MallocUnit::kEntry);
 }
 

@@ -22,10 +22,9 @@ HandleStrictBindingSymOp::HandleStrictBindingSymOp(OperatorArgs args)
 }
 
 void HandleStrictBindingSymOp::extend() {
-    plt_got_off_ = args_.sec_malloc_mgr_->get_or_create(".plt.got", 0x0)
-                       .malloc_dependency();
-    got_off_ =
-        args_.sec_malloc_mgr_->get_or_create(".got", 0x0).malloc_dependency();
+    plt_got_off_ =
+        args_.sec_malloc_mgr_->get_or_create(".plt.got").malloc_dependency();
+    got_off_ = args_.sec_malloc_mgr_->get_or_create(".got").malloc_dependency();
 }
 
 void HandleStrictBindingSymOp::merge() {

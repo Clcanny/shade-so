@@ -20,6 +20,16 @@ extern const char* kInitArray;
 extern const char* kFini;
 extern const char* kFiniArray;
 extern const char* kData;
+extern const char* kBss;
+extern const char* kRodata;
+extern const char* kSymtab;
+extern const char* kRelaDyn;
+extern const char* kStrtab;
+extern const char* kPltGot;
+extern const char* kGot;
+extern const char* kText;
+extern const char* kDynsym;
+extern const char* kDynstr;
 
 }  // namespace sec_names
 }  // namespace shade_so
