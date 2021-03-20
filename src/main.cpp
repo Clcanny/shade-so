@@ -17,7 +17,6 @@
 #include "src/handle_init_fini_op.h"
 #include "src/handle_lazy_symbol_binding.h"
 #include "src/handle_strict_symbol_binding.h"
-#include "src/merge_section.h"
 #include "src/merge_text_section.h"
 #include "src/operator.h"
 #include "src/patch_rip_insts.h"

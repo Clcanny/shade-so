@@ -5,7 +5,6 @@ add_executable (merge.out
     extend_section.cpp
     handle_lazy_symbol_binding.cpp
     main.cpp
-    merge_section.cpp
     patch_rip_insts.cpp
     validate_format.cpp
     merge_text_section.cpp

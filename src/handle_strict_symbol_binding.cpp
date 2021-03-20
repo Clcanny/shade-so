@@ -13,7 +13,6 @@
 
 #include "src/elf.h"
 #include "src/extend_section.h"
-#include "src/merge_section.h"
 
 namespace shade_so {
 
