@@ -12,7 +12,6 @@
 #include <string>
 
 #include "src/elf.h"
-#include "src/extend_section.h"
 
 namespace shade_so {
 

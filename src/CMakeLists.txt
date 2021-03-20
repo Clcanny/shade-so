@@ -2,7 +2,7 @@ set (CMAKE_CXX_STANDARD 17)
 
 add_executable (merge.out
     const.cpp
-    extend_section.cpp
+    sec_malloc_mgr.cpp
     handle_lazy_symbol_binding.cpp
     main.cpp
     patch_rip_insts.cpp

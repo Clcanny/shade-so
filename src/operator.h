@@ -13,7 +13,7 @@
 
 #include <LIEF/ELF.hpp>
 
-#include "src/extend_section.h"
+#include "src/sec_malloc_mgr.h"
 
 namespace shade_so {
 

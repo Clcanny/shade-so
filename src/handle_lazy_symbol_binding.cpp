@@ -17,7 +17,6 @@
 // #include "spdlog/spdlog.h"
 #include "src/const.h"
 #include "src/elf.h"
-#include "src/extend_section.h"
 
 namespace shade_so {
 namespace {

@@ -11,8 +11,6 @@
 #include <set>
 #include <string>
 
-#include "src/extend_section.h"
-
 namespace shade_so {
 
 HandleCodeOp::HandleCodeOp(OperatorArgs args) : args_(args) {

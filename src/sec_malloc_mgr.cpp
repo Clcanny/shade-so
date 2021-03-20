@@ -5,7 +5,7 @@
 // Created: 2021/01/31
 // Description
 
-#include "src/extend_section.h"
+#include "src/sec_malloc_mgr.h"
 
 #include <array>
 #include <cassert>

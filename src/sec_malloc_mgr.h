@@ -5,8 +5,8 @@
 // Created: 2021/01/31
 // Description
 
-#ifndef SRC_EXTEND_SECTION_H_
-#define SRC_EXTEND_SECTION_H_
+#ifndef SRC_SEC_MALLOC_MGR_H_
+#define SRC_SEC_MALLOC_MGR_H_
 
 #include <cstdint>
 #include <map>
@@ -85,4 +85,4 @@ class SecMallocMgr {
 
 }  // namespace shade_so
 
-#endif  // SRC_EXTEND_SECTION_H_
+#endif  // SRC_SEC_MALLOC_MGR_H_

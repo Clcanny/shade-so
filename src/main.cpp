@@ -12,7 +12,6 @@
 #include <LIEF/ELF.hpp>
 
 #include "src/elf.h"
-#include "src/extend_section.h"
 #include "src/handle_global_data_op.h"
 #include "src/handle_init_fini_op.h"
 #include "src/handle_lazy_symbol_binding.h"
@@ -21,6 +20,7 @@
 #include "src/operator.h"
 #include "src/patch_rip_insts.h"
 #include "src/relocate_jump_slot_entry.h"
+#include "src/sec_malloc_mgr.h"
 
 int main() {
     std::unique_ptr<LIEF::ELF::Binary> src(
