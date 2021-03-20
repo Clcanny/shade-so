@@ -5,8 +5,8 @@
 // Created: 2021/01/31
 // Description
 
-#ifndef SRC_HANDLE_LAZY_SYMBOL_BINDING_H_
-#define SRC_HANDLE_LAZY_SYMBOL_BINDING_H_
+#ifndef SRC_HANDLE_LAZY_BINDING_SYM_OP_H_
+#define SRC_HANDLE_LAZY_BINDING_SYM_OP_H_
 
 #include <Zydis/Zydis.h>
 
@@ -43,4 +43,4 @@ class HandleLazyBindingSymOp : public Operator {
 
 }  // namespace shade_so
 
-#endif  // SRC_HANDLE_LAZY_SYMBOL_BINDING_H_
+#endif  // SRC_HANDLE_LAZY_BINDING_SYM_OP_H_

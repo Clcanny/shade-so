@@ -5,8 +5,8 @@
 // Created: 2021/03/08
 // Description
 
-#ifndef SRC_MERGE_TEXT_SECTION_H_
-#define SRC_MERGE_TEXT_SECTION_H_
+#ifndef SRC_HANDLE_CODE_OP_H_
+#define SRC_HANDLE_CODE_OP_H_
 
 #include <cstdint>
 
@@ -29,4 +29,4 @@ class HandleCodeOp : public Operator {
 
 };  // namespace shade_so
 
-#endif  // SRC_MERGE_TEXT_SECTION_H_
+#endif  // SRC_HANDLE_CODE_OP_H_

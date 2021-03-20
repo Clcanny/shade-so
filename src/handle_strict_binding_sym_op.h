@@ -5,8 +5,8 @@
 // Created: 2021/03/11
 // Description
 
-#ifndef SRC_HANDLE_STRICT_SYMBOL_BINDING_H_
-#define SRC_HANDLE_STRICT_SYMBOL_BINDING_H_
+#ifndef SRC_HANDLE_STRICT_BINDING_SYM_OP_H_
+#define SRC_HANDLE_STRICT_BINDING_SYM_OP_H_
 
 #include <cstdint>
 
@@ -30,4 +30,4 @@ class HandleStrictBindingSymOp : public Operator {
 
 }  // namespace shade_so
 
-#endif  // SRC_HANDLE_STRICT_SYMBOL_BINDING_H_
+#endif  // SRC_HANDLE_STRICT_BINDING_SYM_OP_H_

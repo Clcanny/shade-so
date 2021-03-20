@@ -5,7 +5,7 @@
 // Created: 2021/03/11
 // Description
 
-#include "src/handle_strict_symbol_binding.h"
+#include "src/handle_strict_binding_sym_op.h"
 
 #include <algorithm>
 #include <cstdint>

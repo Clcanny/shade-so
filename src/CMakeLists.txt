@@ -3,13 +3,13 @@ set (CMAKE_CXX_STANDARD 17)
 add_executable (merge.out
     const.cpp
     sec_malloc_mgr.cpp
-    handle_lazy_symbol_binding.cpp
+    handle_lazy_binding_sym_op.cpp
     main.cpp
     patch_rip_insts.cpp
     validate_format.cpp
-    merge_text_section.cpp
+    handle_code_op.cpp
     relocate_jump_slot_entry.cpp
-    handle_strict_symbol_binding.cpp
+    handle_strict_binding_sym_op.cpp
     operator.cpp
     handle_init_fini_op.cpp
     handle_global_data_op.cpp

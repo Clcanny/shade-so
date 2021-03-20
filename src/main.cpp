@@ -12,11 +12,11 @@
 #include <LIEF/ELF.hpp>
 
 #include "src/elf.h"
+#include "src/handle_code_op.h"
 #include "src/handle_global_data_op.h"
 #include "src/handle_init_fini_op.h"
-#include "src/handle_lazy_symbol_binding.h"
-#include "src/handle_strict_symbol_binding.h"
-#include "src/merge_text_section.h"
+#include "src/handle_lazy_binding_sym_op.h"
+#include "src/handle_strict_binding_sym_op.h"
 #include "src/operator.h"
 #include "src/patch_rip_insts.h"
 #include "src/relocate_jump_slot_entry.h"

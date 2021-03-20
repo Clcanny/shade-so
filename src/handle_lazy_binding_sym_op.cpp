@@ -5,7 +5,7 @@
 // Created: 2020/10/13
 // Description
 
-#include "src/handle_lazy_symbol_binding.h"
+#include "src/handle_lazy_binding_sym_op.h"
 
 #include <algorithm>
 #include <cassert>
@@ -13,18 +13,10 @@
 #include <numeric>
 #include <vector>
 
-// #include "spdlog/sinks/file_sinks.h"
-// #include "spdlog/spdlog.h"
 #include "src/const.h"
 #include "src/elf.h"
 
 namespace shade_so {
-namespace {
-
-// static auto kLogger = spdlog::rotating_logger_mt(
-//     "HandleLazyBindingSymOp", "logs/shade_so.LOG", 5 * 1024 * 1024, 3);
-
-}  // namespace
 
 HandleLazyBindingSymOp::HandleLazyBindingSymOp(OperatorArgs args)
     : args_(args) {
