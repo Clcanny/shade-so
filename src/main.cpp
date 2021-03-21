@@ -33,28 +33,23 @@ int main() {
 
     shade_so::SecMallocMgr sec_malloc_mgr(*dst, *src, out.get());
     shade_so::OperatorArgs args(*dst, *src, out.get(), &sec_malloc_mgr);
-    shade_so::HandleInitFiniOp handle_init_fini_op(args);
-    handle_init_fini_op.extend();
-    shade_so::HandleGlobalDataOp handle_global_data_op(args);
-    handle_global_data_op.extend();
-    shade_so::HandleThreadLocalDataOp handle_thread_local_data_op(args);
-    handle_thread_local_data_op.extend();
-    shade_so::HandleLazyBindingSymOp handle_lazy_binding_sym_op(args);
-    handle_lazy_binding_sym_op.extend();
-    shade_so::HandleStrictBindingSymOp handle_strict_binding_sym_op(args);
-    handle_strict_binding_sym_op.extend();
-    shade_so::HandleCodeOp handle_code_op(args);
-    handle_code_op.extend();
-
-    handle_lazy_binding_sym_op.merge();
-    handle_code_op.merge();
-    handle_strict_binding_sym_op.merge();
-    handle_init_fini_op.merge();
-    handle_global_data_op.merge();
-    handle_thread_local_data_op.merge();
-
-    shade_so::PatchRipInstsOp patch_rip_insts_op(args);
-    patch_rip_insts_op.patch();
+    std::vector<std::unique_ptr<shade_so::Operator>> ops;
+    ops.emplace_back(new shade_so::HandleInitFiniOp(args));
+    ops.emplace_back(new shade_so::HandleCodeOp(args));
+    ops.emplace_back(new shade_so::HandleGlobalDataOp(args));
+    ops.emplace_back(new shade_so::HandleThreadLocalDataOp(args));
+    ops.emplace_back(new shade_so::HandleLazyBindingSymOp(args));
+    ops.emplace_back(new shade_so::HandleStrictBindingSymOp(args));
+    ops.emplace_back(new shade_so::PatchRipInstsOp(args));
+    for (const auto& op : ops) {
+        op->extend();
+    }
+    for (const auto& op : ops) {
+        op->merge();
+    }
+    for (const auto& op : ops) {
+        op->patch();
+    }
 
     // Set relocation and symbol done.
     // Reset symbol value.

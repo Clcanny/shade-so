@@ -22,19 +22,21 @@ HandleInitFiniOp::HandleInitFiniOp(OperatorArgs args)
 }
 
 void HandleInitFiniOp::extend() {
-    init_off_ =
-        args_.sec_malloc_mgr_->get_or_create(".init").malloc_dependency();
+    init_off_ = args_.sec_malloc_mgr_->get_or_create(sec_names::kInit)
+                    .malloc_dependency();
     init_array_off_ =
-        args_.sec_malloc_mgr_->get_or_create(".init_array").malloc_dependency();
-    fini_off_ =
-        args_.sec_malloc_mgr_->get_or_create(".fini").malloc_dependency();
-    fini_array_off_ = args_.sec_malloc_mgr_->get_or_create(".fini_array")
-                          .malloc_dependency(1, MallocUnit::kEntry);
+        args_.sec_malloc_mgr_->get_or_create(sec_names::kInitArray)
+            .malloc_dependency();
+    fini_off_ = args_.sec_malloc_mgr_->get_or_create(sec_names::kFini)
+                    .malloc_dependency();
+    fini_array_off_ =
+        args_.sec_malloc_mgr_->get_or_create(sec_names::kFiniArray)
+            .malloc_dependency(1, MallocUnit::kEntry);
 }
 
 void HandleInitFiniOp::merge() {
-    merge_section(args_.dependency_, args_.fat_, ".init", init_off_);
-    merge_section(args_.dependency_, args_.fat_, ".fini", fini_off_);
+    merge_section(args_.dependency_, args_.fat_, sec_names::kInit, init_off_);
+    merge_section(args_.dependency_, args_.fat_, sec_names::kFini, fini_off_);
     merge_init_array();
 }
 
