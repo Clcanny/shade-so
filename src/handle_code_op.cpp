@@ -21,6 +21,10 @@ HandleCodeOp::HandleCodeOp(OperatorArgs args) : args_(args) {
 void HandleCodeOp::extend() {
     text_off_ = args_.sec_malloc_mgr_->get_or_create(sec_names::kText)
                     .malloc_dependency();
+    args_.sec_malloc_mgr_->get_or_create(sec_names::kSymtab)
+        .malloc_dependency();
+    args_.sec_malloc_mgr_->get_or_create(sec_names::kStrtab)
+        .malloc_dependency();
 }
 
 void HandleCodeOp::merge() {

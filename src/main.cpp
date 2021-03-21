@@ -32,8 +32,7 @@ int main() {
         LIEF::ELF::Parser::parse("main.out"));
 
     shade_so::SecMallocMgr sec_malloc_mgr(*dst, *src, out.get());
-    for (const std::string& sec_name :
-         std::vector<std::string>{".symtab", ".rela.dyn", ".strtab"}) {
+    for (const std::string& sec_name : std::vector<std::string>{".rela.dyn"}) {
         sec_malloc_mgr.get_or_create(sec_name);
     }
     for (auto& [_, sec_malloc] : sec_malloc_mgr.get()) {
