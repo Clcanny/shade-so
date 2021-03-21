@@ -12,6 +12,7 @@
 
 #include <LIEF/ELF.hpp>
 
+#include "src/const.h"
 #include "src/elf.h"
 
 namespace shade_so {
@@ -21,27 +22,19 @@ HandleGlobalDataOp::HandleGlobalDataOp(OperatorArgs args)
 }
 
 void HandleGlobalDataOp::extend() {
-    args_.sec_malloc_mgr_->get_or_create(".bss").malloc_dependency();
-    rodata_off_ =
-        args_.sec_malloc_mgr_->get_or_create(".rodata").malloc_dependency();
-    data_off_ =
-        args_.sec_malloc_mgr_->get_or_create(".data").malloc_dependency();
-
-    // auto dyn_relocs = args_.dependency_.dynamic_relocations();
-    // auto n = std::count_if(
-    //     dyn_relocs.begin(),
-    //     dyn_relocs.end(),
-    //     [](const LIEF::ELF::Relocation& reloc) {
-    //         return reloc.type() == static_cast<uint32_t>(
-    //                                    shade_so::RelocType::R_X86_64_RELATIVE);
-    //     });
-    // args_.sec_malloc_mgr_->get_or_create(".rela.plt")
-    //     .malloc(n, MallocUnit::kEntry);
+    args_.sec_malloc_mgr_->get_or_create(sec_names::kBss).malloc_dependency();
+    rodata_off_ = args_.sec_malloc_mgr_->get_or_create(sec_names::kRodata)
+                      .malloc_dependency();
+    data_off_ = args_.sec_malloc_mgr_->get_or_create(sec_names::kData)
+                    .malloc_dependency();
+    args_.sec_malloc_mgr_->get_or_create(sec_names::kRelaDyn)
+        .malloc_dependency();
 }
 
 void HandleGlobalDataOp::merge() {
-    merge_section(args_.dependency_, args_.fat_, ".rodata", rodata_off_);
-    merge_section(args_.dependency_, args_.fat_, ".data", data_off_);
+    merge_section(
+        args_.dependency_, args_.fat_, sec_names::kRodata, rodata_off_);
+    merge_section(args_.dependency_, args_.fat_, sec_names::kData, data_off_);
     merge_relative_relocs();
 }
 

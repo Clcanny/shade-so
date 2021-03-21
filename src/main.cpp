@@ -32,12 +32,6 @@ int main() {
         LIEF::ELF::Parser::parse("main.out"));
 
     shade_so::SecMallocMgr sec_malloc_mgr(*dst, *src, out.get());
-    for (const std::string& sec_name : std::vector<std::string>{".rela.dyn"}) {
-        sec_malloc_mgr.get_or_create(sec_name);
-    }
-    for (auto& [_, sec_malloc] : sec_malloc_mgr.get()) {
-        sec_malloc.malloc_dependency();
-    }
     shade_so::OperatorArgs args(*dst, *src, out.get(), &sec_malloc_mgr);
     shade_so::HandleInitFiniOp handle_init_fini_op(args);
     handle_init_fini_op.extend();
