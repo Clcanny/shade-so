@@ -23,6 +23,7 @@ class OperatorArgs {
                  const LIEF::ELF::Binary& dependency,
                  LIEF::ELF::Binary* fat,
                  SecMallocMgr* sec_malloc_mgr);
+    virtual ~OperatorArgs() = default;
 
  public:
     const LIEF::ELF::Binary& artifact_;

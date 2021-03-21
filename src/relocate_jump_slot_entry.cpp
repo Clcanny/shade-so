@@ -32,7 +32,6 @@ void RelocateJumpSlotEntry::operator()() {
         for (auto i = 0; i < 8; i++) {
             bytes_to_be_patched.emplace_back((sym.value() >> (8 * i)) & 0xFF);
         }
-        std::cout << std::hex << reloc.address() << std::endl;
         out_->patch_address(reloc.address(), bytes_to_be_patched);
     }
 }

@@ -17,6 +17,7 @@
 #include "src/handle_init_fini_op.h"
 #include "src/handle_lazy_binding_sym_op.h"
 #include "src/handle_strict_binding_sym_op.h"
+#include "src/handle_thread_local_data_op.h"
 #include "src/operator.h"
 #include "src/patch_rip_insts.h"
 #include "src/relocate_jump_slot_entry.h"
@@ -43,6 +44,8 @@ int main() {
     handle_init_fini_op.extend();
     shade_so::HandleGlobalDataOp handle_global_data_op(args);
     handle_global_data_op.extend();
+    shade_so::HandleThreadLocalDataOp handle_thread_local_data_op(args);
+    handle_thread_local_data_op.extend();
     shade_so::HandleLazyBindingSymOp handle_lazy_binding_sym_op(args);
     handle_lazy_binding_sym_op.extend();
     shade_so::HandleStrictBindingSymOp handle_strict_binding_sym_op(args);
@@ -55,6 +58,7 @@ int main() {
     handle_strict_binding_sym_op.merge();
     handle_init_fini_op.merge();
     handle_global_data_op.merge();
+    handle_thread_local_data_op.merge();
 
     shade_so::PatchRipInstsOp patch_rip_insts_op(args);
     patch_rip_insts_op.patch();

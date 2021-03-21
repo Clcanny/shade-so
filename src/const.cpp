@@ -29,6 +29,8 @@ const char* kGot = ".got";
 const char* kText = ".text";
 const char* kDynsym = ".dynsym";
 const char* kDynstr = ".dynstr";
+const char* kTbss = ".tbss";
+const char* kTdata = ".tdata";
 
 }  // namespace sec_names
 }  // namespace shade_so

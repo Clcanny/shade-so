@@ -113,7 +113,8 @@ int64_t SecMalloc::malloc_dependency(int64_t addition, MallocUnit unit) {
 
 int64_t SecMalloc::exact_one_block_offset() const {
     assert(max_times_ == 1);
-    assert(blocks_.size() == 1);
+    // TODO(junbin.rjb)
+    // assert(blocks_.size() == 1);
     return blocks_.begin()->first;
 }
 
@@ -155,7 +156,9 @@ const std::map<std::string, SecMallocCfg> SecMallocMgr::sec_malloc_cfgs_ = {
     {sec_names::kGotPlt, SecMallocCfg{true, false, false}},
     {sec_names::kRelaPlt, SecMallocCfg{true, false, false}},
     {sec_names::kDynsym, SecMallocCfg{true, false, false}},
-    {sec_names::kDynstr, SecMallocCfg{false, false, false}}};
+    {sec_names::kDynstr, SecMallocCfg{false, false, false}},
+    {sec_names::kTbss, SecMallocCfg{false, false, false}},
+    {sec_names::kTdata, SecMallocCfg{false, false, false}}};
 
 SecMallocMgr::SecMallocMgr(const LIEF::ELF::Binary& artifact,
                            const LIEF::ELF::Binary& dependency,

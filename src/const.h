@@ -30,6 +30,8 @@ extern const char* kGot;
 extern const char* kText;
 extern const char* kDynsym;
 extern const char* kDynstr;
+extern const char* kTbss;
+extern const char* kTdata;
 
 }  // namespace sec_names
 }  // namespace shade_so
