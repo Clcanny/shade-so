@@ -9,7 +9,6 @@
 
 #include <array>
 #include <cassert>
-#include <cmath>
 #include <cstring>
 #include <numeric>
 #include <tuple>
@@ -72,19 +71,21 @@ int64_t SecMalloc::malloc(int64_t size, MallocUnit unit) {
     }
 
     assert(blocks_.size() < max_times_);
-    size = std::ceil(size * 1.0 / sec_align_) * sec_align_;
+    size = ceil(size, sec_align_);
     assert(size_ <= capacity_);
-    size_ = std::ceil(size_ * 1.0 / sec_align_) * sec_align_;
+    if (blocks_.empty()) {
+        size_ = ceil(size_, sec_align_);
+    }
+    assert(size_ % sec_align_ == 0);
     if (size_ + size > capacity_) {
-        auto extend_size =
-            std::ceil((size_ + size) * 1.0 / elf_align_) * elf_align_ -
-            capacity_;
-        fat_->extend(*sec_, extend_size);
-        capacity_ = size_ + extend_size;
+        int64_t exp_cap = ceil(size_ + size, elf_align_);
+        assert(exp_cap - capacity_ > 0);
+        fat_->extend(*sec_, exp_cap - capacity_);
+        capacity_ = exp_cap;
         assert(capacity_ == sec_->size());
         std::vector<uint8_t> content = sec_->content();
         assert(content.size() == capacity_);
-        std::memset(content.data() + size_, empty_val_, extend_size);
+        std::memset(content.data() + size_, empty_val_, capacity_ - size_);
         sec_->content(content);
         assert(size_ + size <= capacity_);
     }
@@ -126,6 +127,13 @@ void SecMalloc::close() const {
         assert(off == size_);
     }
     assert(blocks_.size() <= max_times_);
+}
+
+int64_t SecMalloc::ceil(int64_t size, int64_t align) const {
+    if (size % align == 0) {
+        return size;
+    }
+    return (size / align + 1) * align;
 }
 
 const std::map<std::string, SecMallocCfg> SecMallocMgr::sec_malloc_cfgs_ = {

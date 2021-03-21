@@ -40,6 +40,9 @@ class SecMalloc {
     void close() const;
 
  private:
+    int64_t ceil(int64_t size, int64_t align) const;
+
+ private:
     const LIEF::ELF::Binary& artifact_;
     const LIEF::ELF::Binary& dependency_;
 
