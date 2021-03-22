@@ -25,9 +25,6 @@ class HandleLazyBindingSymOp : public Operator {
     void merge() override;
 
  private:
-    uint64_t check() const;
-    void extend(uint64_t src_id);
-
     void fill(uint64_t entries_num);
     template <int N>
     void handle_plt_entry_inst(int entry_id,
