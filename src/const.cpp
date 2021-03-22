@@ -33,4 +33,11 @@ const char* kTbss = ".tbss";
 const char* kTdata = ".tdata";
 
 }  // namespace sec_names
+
+namespace func_names {
+
+const char* kLibcCsuInit = "__libc_csu_init";
+
+}  // namespace func_names
+
 }  // namespace shade_so

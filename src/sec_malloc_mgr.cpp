@@ -194,7 +194,7 @@ SecMalloc& SecMallocMgr::get_or_create(const std::string& name) {
                                  dependency_,
                                  fat_,
                                  name,
-                                 false,                       // need_align
+                                 true,                        // need_align
                                  !cfg.is_table,               // allow_hole
                                  cfg.is_code ? 0x90 : 0x0,    // empty_val
                                  cfg.multi_malloc ? 10 : 1))  // max_times

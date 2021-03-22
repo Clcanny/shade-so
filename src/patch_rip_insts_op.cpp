@@ -19,15 +19,29 @@
 
 namespace shade_so {
 
-PatchRipInstsOp::PatchRipInstsOp(OperatorArgs args) : args_(args) {
+PatchRipInstsOp::PatchRipInstsOp(OperatorArgs args)
+    : args_(args), libc_csu_init_sa_(0), libc_csu_init_sz_(0) {
     ZydisDecoderInit(
         &decoder_, ZYDIS_MACHINE_MODE_LONG_64, ZYDIS_ADDRESS_WIDTH_64);
     ZydisFormatterInit(&formatter_, ZYDIS_FORMATTER_STYLE_INTEL);
+
+    if (args_.fat_->has_static_symbol(func_names::kLibcCsuInit)) {
+        const auto& libc_csu_init_sym =
+            args_.fat_->get_static_symbol(func_names::kLibcCsuInit);
+        libc_csu_init_sa_ = libc_csu_init_sym.value();
+        libc_csu_init_sz_ = libc_csu_init_sym.size();
+    } else {
+        // TODO(junbin.rjb)
+        // Log warning.
+    }
 }
 
 void PatchRipInstsOp::patch() {
     for (const std::string& sec_name :
-         std::array<std::string, 4>{".init", ".text", ".plt", ".plt.got"}) {
+         std::array<std::string, 4>{sec_names::kInit,
+                                    sec_names::kText,
+                                    sec_names::kPlt,
+                                    sec_names::kPltGot}) {
         patch(sec_name);
     }
 }
@@ -190,9 +204,27 @@ uint64_t PatchRipInstsOp::cal_new_rip_arg_internal<true>(
 
     uint64_t fat_cur_va = fat_sec.virtual_address() + inst_off;
     uint64_t fat_rip = fat_cur_va + inst.length;
-    uint64_t fat_rip_arg =
-        fat_to_sec.virtual_address() +
-        (artifact_jump_to - artifact_to_sec->virtual_address()) - fat_rip;
+    uint64_t fat_rip_arg = 0;
+    // Hack for __libc_csu_init.
+    const auto& artifact_init_array_sec =
+        args_.artifact_.get_section(sec_names::kInitArray);
+    if (artifact_jump_to == artifact_init_array_sec.virtual_address() +
+                                artifact_init_array_sec.size() &&
+        (artifact_cur_va >= libc_csu_init_sa_ &&
+         artifact_cur_va < libc_csu_init_sa_ + libc_csu_init_sz_)) {
+        fat_rip_arg =
+            args_.fat_->get_section(sec_names::kInitArray).virtual_address() +
+            args_.fat_->get(LIEF::ELF::DYNAMIC_TAGS::DT_INIT_ARRAY)
+                    .as<LIEF::ELF::DynamicEntryArray>()
+                    ->size() *
+                args_.fat_->get_section(sec_names::kInitArray).entry_size() -
+            fat_rip;
+        std::cout << "here" << std::endl;
+    } else {
+        fat_rip_arg = fat_to_sec.virtual_address() +
+                      (artifact_jump_to - artifact_to_sec->virtual_address()) -
+                      fat_rip;
+    }
     return fat_rip_arg;
 }
 

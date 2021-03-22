@@ -34,6 +34,12 @@ extern const char* kTbss;
 extern const char* kTdata;
 
 }  // namespace sec_names
+
+namespace func_names {
+
+extern const char* kLibcCsuInit;
+
+}  // namespace func_names
 }  // namespace shade_so
 
 #endif  // SRC_CONST_H_

@@ -66,6 +66,9 @@ class PatchRipInstsOp : public Operator {
     OperatorArgs args_;
     ZydisDecoder decoder_;
     ZydisFormatter formatter_;
+
+    int64_t libc_csu_init_sa_;
+    int64_t libc_csu_init_sz_;
 };
 
 }  // namespace shade_so
