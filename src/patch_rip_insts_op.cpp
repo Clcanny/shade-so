@@ -208,19 +208,8 @@ uint64_t PatchRipInstsOp::cal_new_rip_arg_internal<true>(
     // Hack for __libc_csu_init.
     const auto& artifact_init_array_sec =
         args_.artifact_.get_section(sec_names::kInitArray);
-    if (artifact_jump_to == artifact_init_array_sec.virtual_address() +
-                                artifact_init_array_sec.size() &&
-        (artifact_cur_va >= libc_csu_init_sa_ &&
-         artifact_cur_va < libc_csu_init_sa_ + libc_csu_init_sz_)) {
-        fat_rip_arg =
-            args_.fat_->get_section(sec_names::kInitArray).virtual_address() +
-            args_.fat_->get(LIEF::ELF::DYNAMIC_TAGS::DT_INIT_ARRAY)
-                    .as<LIEF::ELF::DynamicEntryArray>()
-                    ->size() *
-                args_.fat_->get_section(sec_names::kInitArray).entry_size() -
-            fat_rip;
-        std::cout << "here" << std::endl;
-    } else {
+    if (!hack_libc_csu_init_new_rip_arg(
+            artifact_cur_va, artifact_jump_to, fat_rip, &fat_rip_arg)) {
         fat_rip_arg = fat_to_sec.virtual_address() +
                       (artifact_jump_to - artifact_to_sec->virtual_address()) -
                       fat_rip;
@@ -300,6 +289,30 @@ const LIEF::ELF::Section* PatchRipInstsOp::sec_from_va(
         assert(false);
     }
     return sec;
+}
+
+bool PatchRipInstsOp::hack_libc_csu_init_new_rip_arg(
+    uint64_t artifact_cur_va,
+    uint64_t artifact_jump_to,
+    uint64_t fat_rip,
+    uint64_t* fat_rip_arg) const {
+    const auto& artifact_init_array_sec =
+        args_.artifact_.get_section(sec_names::kInitArray);
+    const auto& fat_init_array_sec =
+        args_.fat_->get_section(sec_names::kInitArray);
+    if (!(artifact_jump_to == artifact_init_array_sec.virtual_address() +
+                                  artifact_init_array_sec.size() &&
+          (artifact_cur_va >= libc_csu_init_sa_ &&
+           artifact_cur_va < libc_csu_init_sa_ + libc_csu_init_sz_))) {
+        return false;
+    }
+    *fat_rip_arg = fat_init_array_sec.virtual_address() +
+                   args_.fat_->get(LIEF::ELF::DYNAMIC_TAGS::DT_INIT_ARRAY)
+                           .as<LIEF::ELF::DynamicEntryArray>()
+                           ->size() *
+                       fat_init_array_sec.entry_size() -
+                   fat_rip;
+    return true;
 }
 
 }  // namespace shade_so

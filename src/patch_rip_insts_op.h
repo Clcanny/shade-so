@@ -61,6 +61,10 @@ class PatchRipInstsOp : public Operator {
                                       uint64_t artifact_rip_arg) const;
     const LIEF::ELF::Section* sec_from_va(const LIEF::ELF::Binary& bin,
                                           uint64_t va) const;
+    bool hack_libc_csu_init_new_rip_arg(uint64_t artifact_cur_va,
+                                        uint64_t artifact_jump_to,
+                                        uint64_t fat_rip,
+                                        uint64_t* fat_rip_arg) const;
 
  private:
     OperatorArgs args_;
