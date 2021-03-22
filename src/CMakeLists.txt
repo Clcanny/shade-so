@@ -5,7 +5,7 @@ add_executable (merge.out
     sec_malloc_mgr.cpp
     handle_lazy_binding_sym_op.cpp
     main.cpp
-    patch_rip_insts.cpp
+    patch_rip_insts_op.cpp
     validate_format.cpp
     handle_code_op.cpp
     relocate_jump_slot_entry.cpp

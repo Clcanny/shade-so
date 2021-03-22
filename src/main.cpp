@@ -19,7 +19,7 @@
 #include "src/handle_strict_binding_sym_op.h"
 #include "src/handle_thread_local_data_op.h"
 #include "src/operator.h"
-#include "src/patch_rip_insts.h"
+#include "src/patch_rip_insts_op.h"
 #include "src/relocate_jump_slot_entry.h"
 #include "src/sec_malloc_mgr.h"
 

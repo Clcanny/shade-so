@@ -5,8 +5,8 @@
 // Created: 2021/01/31
 // Description
 
-#ifndef SRC_PATCH_RIP_INSTS_H_
-#define SRC_PATCH_RIP_INSTS_H_
+#ifndef SRC_PATCH_RIP_INSTS_OP_H_
+#define SRC_PATCH_RIP_INSTS_OP_H_
 
 #include <Zydis/Zydis.h>
 
@@ -70,4 +70,4 @@ class PatchRipInstsOp : public Operator {
 
 }  // namespace shade_so
 
-#endif  // SRC_PATCH_RIP_INSTS_H_
+#endif  // SRC_PATCH_RIP_INSTS_OP_H_
