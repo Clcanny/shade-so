@@ -13,6 +13,7 @@
 #include <LIEF/ELF.hpp>
 
 #include "src/const.h"
+#include "src/elf.h"
 
 namespace shade_so {
 
@@ -71,19 +72,27 @@ void HandleInitFiniOp::merge_init_array() {
         fat_init_arr->append(fat_init_func);
     }
 
-    // TODO(junbin.rjb)
-    // Test frame_dummy code.
-    // Don't call frame_dummy twice.
-    // for (uint64_t artifact_init_func : artifact_init_arr->array()) {
-    //     const auto& artifact_to_sec =
-    //         args_.artifact_.section_from_virtual_address(artifact_init_func);
-    //     const auto& fat_to_sec =
-    //         args_.fat_->get_section(artifact_to_sec.name());
-    //     int64_t fat_init_func =
-    //         fat_to_sec.virtual_address() +
-    //         (artifact_init_func - artifact_to_sec.virtual_address());
-    //     fat_init_arr->append(fat_init_func);
-    // }
+    for (uint64_t artifact_init_func : artifact_init_arr->array()) {
+        const auto& artifact_to_sec =
+            args_.artifact_.section_from_virtual_address(artifact_init_func);
+        const auto& fat_to_sec =
+            args_.fat_->get_section(artifact_to_sec.name());
+        int64_t fat_init_func =
+            fat_to_sec.virtual_address() +
+            (artifact_init_func - artifact_to_sec.virtual_address());
+        fat_init_arr->append(fat_init_func);
+    }
+
+    const auto& fat_init_array_sec =
+        args_.fat_->get_section(sec_names::kInitArray);
+    for (auto i = 0; i < fat_init_arr->size(); i++) {
+        args_.fat_->add_dynamic_relocation(
+            LIEF::ELF::Relocation(fat_init_array_sec.virtual_address() +
+                                      i * fat_init_array_sec.entry_size(),
+                                  RelocType::R_X86_64_RELATIVE,
+                                  fat_init_arr->array()[i],
+                                  true));
+    }
 }
 
 }  // namespace shade_so

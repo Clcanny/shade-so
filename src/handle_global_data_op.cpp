@@ -52,6 +52,11 @@ void HandleGlobalDataOp::merge_relative_relocs() {
             args_.fat_->get_section(dep_sec.name());
         const LIEF::ELF::Section& dep_to_sec =
             args_.dependency_.section_from_virtual_address(dep_reloc.addend());
+        if (dep_to_sec.name() != sec_names::kBss &&
+            dep_to_sec.name() != sec_names::kData &&
+            dep_to_sec.name() != sec_names::kRodata) {
+            continue;
+        }
         const LIEF::ELF::Section& fat_to_sec =
             args_.fat_->get_section(dep_to_sec.name());
 

@@ -25,8 +25,6 @@ class HandleGlobalDataOp : public Operator {
 
  private:
     OperatorArgs args_;
-    // TODO(junbin.rjb)
-    // bss_off_?
     int64_t data_off_;
     int64_t rodata_off_;
 };
