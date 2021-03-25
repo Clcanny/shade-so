@@ -132,14 +132,8 @@ void HandleLazyBindingSymOp::handle_plt_entry_inst<1>(
     const auto& dep_reloc = args_.dependency_.pltgot_relocations()[entry_id];
     LIEF::ELF::Relocation fat_reloc = dep_reloc;
     if (dep_reloc.has_symbol()) {
-        const auto& src_sym = dep_reloc.symbol();
-        // Symbol& fat_sym = out_->add_dynamic_symbol(
-        //     src_sym,
-        //     src_sym.has_version() ? const_cast<LIEF::ELF::SymbolVersion*>(
-        //                                 &src_sym.symbol_version())
-        //                           : nullptr);
-        LIEF::ELF::Symbol& fat_sym = args_.fat_->add_dynamic_symbol(src_sym);
-        fat_reloc.symbol(&fat_sym);
+        auto fat_sym = create_fat_sym(args_, dep_reloc.symbol());
+        fat_reloc.symbol(&get_or_insert_fat_sym(args_, *fat_sym, true));
     }
     fat_reloc.address(
         fat_got_plt_sec.virtual_address() +

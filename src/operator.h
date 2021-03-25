@@ -9,9 +9,10 @@
 #define SRC_OPERATOR_H_
 
 #include <cstdint>
+#include <memory>
 #include <string>
 
-#include <LIEF/ELF.hpp>
+#include <LIEF/LIEF.hpp>
 
 #include "src/sec_malloc_mgr.h"
 
@@ -43,6 +44,13 @@ class Operator {
                        LIEF::ELF::Binary* fat,
                        const std::string& name,
                        int64_t offset);
+    // TODO(junbin.rjb)
+    // Delete duplicated func.
+    std::unique_ptr<LIEF::ELF::Symbol> create_fat_sym(
+        OperatorArgs args, const LIEF::ELF::Symbol& dep_sym);
+    LIEF::ELF::Symbol& get_or_insert_fat_sym(OperatorArgs args,
+                                             const LIEF::ELF::Symbol& fat_sym,
+                                             bool is_dyn_sym);
 };
 
 }  // namespace shade_so

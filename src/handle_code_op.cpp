@@ -56,17 +56,11 @@ void HandleCodeOp::merge() {
             continue;
         }
         addedSyms.insert(name);
-        LIEF::ELF::Symbol fat_sym(
-            name,
-            LIEF::ELF::ELF_SYMBOL_TYPES::STT_FUNC,
-            LIEF::ELF::SYMBOL_BINDINGS::STB_LOCAL,
-            // dep_sym.other(),
-            0,
-            fat_text_id,
-            fat_text_sec.virtual_address() + text_off_ +
-                (dep_sym.value() - dep_text_sec.virtual_address()),
-            dep_sym.size());
-        args_.fat_->add_static_symbol(fat_sym);
+        auto fat_sym = create_fat_sym(args_, dep_sym);
+        fat_sym->value(fat_text_sec.virtual_address() + text_off_ +
+                       (dep_sym.value() - dep_text_sec.virtual_address()));
+        fat_sym->binding(LIEF::ELF::SYMBOL_BINDINGS::STB_LOCAL);
+        get_or_insert_fat_sym(args_, *fat_sym, false);
     }
 }
 

@@ -21,9 +21,13 @@ class HandleThreadLocalDataOp : public Operator {
     void merge() override;
 
  private:
+    void merge_reloc(const LIEF::ELF::Segment& dep_tls_seg,
+                     const LIEF::ELF::Segment& fat_tls_seg);
+
+ private:
     OperatorArgs args_;
-    int64_t tbss_off_;
     int64_t tdata_off_;
+    int64_t tbss_off_;
 };
 
 }  // namespace shade_so

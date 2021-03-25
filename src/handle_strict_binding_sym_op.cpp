@@ -61,17 +61,10 @@ void HandleStrictBindingSymOp::merge() {
                     args_.sec_malloc_mgr_->get(name).exact_one_block_offset() +
                     (dep_sym.value() - dep_to_sec.virtual_address());
         }
-        LIEF::ELF::Symbol fat_sym(dep_sym.name(),
-                                  dep_sym.type(),
-                                  dep_sym.binding(),
-                                  dep_sym.other(),
-                                  // fat_sec_id,
-                                  dep_sym.section_idx() == 0 ? 0 : fat_sec_id,
-                                  value,
-                                  dep_sym.size());
-        args_.fat_->add_static_symbol(fat_sym);
-        LIEF::ELF::Symbol& sym =
-            args_.fat_->add_dynamic_symbol(fat_sym, nullptr);
+        auto fat_sym = create_fat_sym(args_, dep_sym);
+        fat_sym->value(value);
+        get_or_insert_fat_sym(args_, *fat_sym, false);
+        LIEF::ELF::Symbol& sym = get_or_insert_fat_sym(args_, *fat_sym, true);
 
         LIEF::ELF::Relocation fat_reloc(
             fat_sec.virtual_address() +
